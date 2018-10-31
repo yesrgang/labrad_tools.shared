@@ -1,0 +1,12 @@
+comments...
+install/usage guide
+
+neat spin box, units/prefixes...
+move node headers to ini, eh
+
+meta-variables *HODTf = *another_variable
+sub sequences follow previous value
+
+figure out some way to always pass conf objects between servers and clients. make immune to server restarts.
+
+conductor advance device, specify trigger on different events: sequencer signal, pmt/camera data recv, manual
