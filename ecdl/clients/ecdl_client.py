@@ -6,30 +6,20 @@ from PyQt4 import QtGui, QtCore, Qt
 from PyQt4.QtCore import pyqtSignal
 from twisted.internet.defer import inlineCallbacks
 
-sys.path.append('../../client_tools')
-from connection import connection
-from widgets import SuperSpinBox
+from client_tools.connection import connection
+from client_tools.widgets import SuperSpinBox
 
 class ParameterLabel(QtGui.QLabel):
     clicked = pyqtSignal()
     def mousePressEvent(self, x):
         self.clicked.emit()
 
-class ECDLControl(QtGui.QGroupBox):
-    def __init__(self, config, reactor, cxn=None):
+class ECDLClient(QtGui.QGroupBox):
+    def __init__(self, reactor, cxn=None):
         QtGui.QDialog.__init__(self)
         self.reactor = reactor
         self.cxn = cxn 
-        self.load_config(config)
         self.connect()
-
-    def load_config(self, config=None):
-        if type(config).__name__ == 'str':
-            config = __import__(config).ControlConfig()
-        if config is not None:
-            self.config = config
-        for key, value in self.config.__dict__.items():
-            setattr(self, key, value)
 
     @inlineCallbacks
     def connect(self):
@@ -37,7 +27,6 @@ class ECDLControl(QtGui.QGroupBox):
             self.cxn = connection()
             cname = '{} - {} - client'.format(self.servername, self.name)
             yield self.cxn.connect(name=cname)
-        self.context = yield self.cxn.context()
         yield self.select_device()
         self.populateGUI()
         yield self.connectSignals()
@@ -45,11 +34,15 @@ class ECDLControl(QtGui.QGroupBox):
 
     @inlineCallbacks
     def select_device(self):
+        print self.servername
         server = yield self.cxn.get_server(self.servername)
-        config = yield server.select_device(self.name)
-        for key, value in json.loads(config).items():
+        request = {self.name: None}
+        info_json = yield server.get_device_infos(json.dumps(request))
+        info = json.loads(info_json)
+        print info
+        print info[self.name]
+        for key, value in info[self.name].items():
             setattr(self, key, value)
-        self.load_config()
     
     def populateGUI(self):
         self.state_button = QtGui.QPushButton()
@@ -90,7 +83,7 @@ class ECDLControl(QtGui.QGroupBox):
                                   row, 0, 1, 1, QtCore.Qt.AlignRight)
             self.layout.addWidget(self.diode_current_box, row, 1)
 
-        self.setWindowTitle(self.name + '_control')
+        self.setWindowTitle(self.name)
         self.setLayout(self.layout)
         self.setFixedSize(120 + self.spinbox_width, 100)
 
@@ -122,29 +115,34 @@ class ECDLControl(QtGui.QGroupBox):
     @inlineCallbacks
     def requestValues(self, c=None):
         server = yield self.cxn.get_server(self.servername)
+        request = {self.name: None}
         for parameter in self.update_parameters:
-            yield getattr(server, parameter)()
+            yield getattr(server, parameter + 's')(json.dumps(request))
  
-    def receive_update(self, c, signal):
-        signal = json.loads(signal)
-        for name, d in signal.items():
-            self.free = False
-            if name == self.name:
-                if 'state' in self.update_parameters:
-                    if d['state']:
-                        self.state_button.setChecked(1)
-                        self.state_button.setText('On')
-                    else:
-                        self.state_button.setChecked(0)
-                        self.state_button.setText('Off')
-                
-                if 'piezo_voltage' in self.update_parameters:
-                    self.piezo_voltage_box.display(d['piezo_voltage'])
-    
-                if 'diode_current' in self.update_parameters:
-                    self.diode_current_box.display(d['diode_current'])
-        self.free = True
-    
+    def receive_update(self, c, signal_json):
+        signal = json.loads(signal_json)
+        for message_type, message in signal.items():
+            print message_type
+            print message
+            device_message = message.get(self.name)
+            if (message_type == 'states') and (device_message is not None):
+                self.free = False
+                if device_message:
+                    self.state_button.setChecked(1)
+                    self.state_button.setText('On')
+                else:
+                    self.state_button.setChecked(0)
+                    self.state_button.setText('Off')
+                self.free = True
+            if (message_type == 'piezo_voltages') and (device_message is not None):
+                self.free = False
+                self.piezo_voltage_box.display(device_message)
+                self.free = True
+            if (message_type == 'diode_currents') and (device_message is not None):
+                self.free = False
+                self.diode_current_box.display(device_message)
+                self.free = True
+
     @inlineCallbacks
     def onNewState(self):
         if self.free:
@@ -168,11 +166,13 @@ class ECDLControl(QtGui.QGroupBox):
     def writeValues(self):
         if self.hasNewPiezoVoltage:
             server = yield self.cxn.get_server(self.servername)
-            yield server.piezo_voltage(self.piezo_voltage_box.value())
+            request = {self.name: self.piezo_voltage_box.value()}
+            yield server.piezo_voltages(json.dumps(request))
             self.hasNewPiezoVoltage = False
         elif self.hasNewDiodeCurrent:
             server = yield self.cxn.get_server(self.servername)
-            yield server.diode_current(self.diode_current_box.value())
+            request = {self.name: self.diode_current_box.value()}
+            yield server.diode_currents(json.dumps(request))
             self.hasNewDiodeCurrent = False
            
     def reinitialize(self):
