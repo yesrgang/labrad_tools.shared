@@ -75,9 +75,14 @@ class AnalogArray(FigureCanvas):
             channel_sequence = sequence[nl]
             for s in channel_sequence:
                 s['dt'] = 1
-            T, V = self.rampMaker(channel_sequence).get_plottable(scale='step')
+            try:
+                T, V = self.rampMaker(channel_sequence).get_plottable(scale='step')
+            except:
+                print nl
+                print channel_sequence
+                raise
             if max(abs(V)) > 0:
-                V *= 9. / max(V)
+                V *= 9. / max(abs(V))
             V = np.array(V) - i*20
             self.axes.plot(T, V)
         for i in range(len(self.channels)-1):
@@ -132,12 +137,13 @@ class AnalogClient(QtGui.QWidget):
 
     def displaySequence(self, sequence):
         self.sequence = sequence
-        self.array.plotSequence(sequence)
+        plottable_sequence = substitute_sequence_parameters(self.sequence,
+                                                            self.parent.sequence_parameters)
+        self.array.plotSequence(plottable_sequence)
 
     def updateParameters(self, parameter_values):
-        plottable_sequence = substitute_sequence_parameters(self.sequence,
-                                                            parameter_values)
-        self.array.plotSequence(plottable_sequence)
+        self.parameter_values = parameter_values
+        self.displaySequence(self.sequence)
     
     def connectWidgets(self):
         self.vscrolls = [self.nameColumn.scrollArea.verticalScrollBar(), 

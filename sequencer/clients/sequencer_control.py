@@ -16,6 +16,7 @@ from sequencer.clients.widgets.analog_widgets import AnalogClient
 from sequencer.clients.widgets.add_dlt_widgets import AddDltRow
 from sequencer.clients.widgets.analog_editor import AnalogVoltageEditor
 from sequencer.clients.widgets.analog_manual_client import AnalogVoltageManualClient
+from sequencer.clients.helpers import merge_dicts, get_sequence_parameters, substitute_sequence_parameters
 
 SEP = os.path.sep
 
@@ -45,6 +46,8 @@ class SequencerClient(QtGui.QWidget):
     sequencer_update_id = None
     sequence_directory = None
 
+    sequence_parameters = {}
+
     time_format = '%Y%m%d'
 
     spacer_width = 65
@@ -60,6 +63,7 @@ class SequencerClient(QtGui.QWidget):
     def __init__(self, reactor, cxn=None):
         super(SequencerClient, self).__init__(None)
         self.sequencer_update_id = np.random.randint(0, 2**32 - 1)
+        self.conductor_update_id = np.random.randint(0, 2**32 - 1)
         self.name = '{} - client'.format(self.sequencer_servername)
         self.reactor = reactor
         self.cxn = cxn
@@ -73,8 +77,9 @@ class SequencerClient(QtGui.QWidget):
                 yield self.cxn.connect(name=self.name)
             yield self.getChannels()
             self.populate()
-            self.displaySequence(self.default_sequence)
+            yield self.displaySequence(self.default_sequence)
             yield self.connectSignals()
+            yield self.get_sequence_parameters()
         except Exception, e:
             raise e
 
@@ -232,6 +237,7 @@ class SequencerClient(QtGui.QWidget):
 
         self.loadAndSave.saveButton.clicked.connect(self.saveSequence)
         self.loadAndSave.loadButton.clicked.connect(self.browse)
+#        self.loadAndSave.locationBox.returnPressed.connect(self.loadSequence)
 
         for i, b in enumerate(self.addDltRow.buttons):
             b.add.clicked.connect(self.addColumn(i))
@@ -307,6 +313,7 @@ class SequencerClient(QtGui.QWidget):
                         for s in master_sequence
                         ]
             sequence.update({channel_key: channel_sequence})
+
         self.displaySequence(sequence)
         self.loadAndSave.locationBox.setText(filepath)
     
@@ -330,9 +337,10 @@ class SequencerClient(QtGui.QWidget):
             if sequence_loc == channel_loc:
                 return sequence_key
     
-#    @inlineCallbacks
+    @inlineCallbacks
     def displaySequence(self, sequence):
         self.sequence = sequence
+        yield self.get_sequence_parameters()
         self.durationRow.displaySequence(sequence)
         self.digitalClient.displaySequence(sequence)
         self.analogClient.displaySequence(sequence)
@@ -407,7 +415,7 @@ class SequencerClient(QtGui.QWidget):
                     sequence = ave.getEditedSequence().copy()
                     self.displaySequence(sequence)
                     conductor = yield self.cxn.get_server(self.conductor_servername)
-                    yield conductor.signal__update(self.conductor_update_id)
+                    yield conductor.signal__update(ave.conductor_update_id)
                     yield conductor.removeListener(listener=ave.receive_conductor_update, 
                                                    source=None, ID=ave.conductor_update_id)
         return oanc
@@ -416,8 +424,13 @@ class SequencerClient(QtGui.QWidget):
     def connectSignals(self):
         sequencer = yield self.cxn.get_server(self.sequencer_servername)
         yield sequencer.signal__update(self.sequencer_update_id)
-        yield sequencer.addListener(listener=self.update_sequencer, source=None,
+        yield sequencer.addListener(listener=self.receive_sequencer_update, source=None,
                                     ID=self.sequencer_update_id)
+        conductor = yield self.cxn.get_server(self.conductor_servername)
+        yield conductor.signal__update(self.conductor_update_id)
+        yield conductor.addListener(listener=self.receive_conductor_update, 
+                                    source=None, ID=self.conductor_update_id)
+
 
     def updateParameters(self):
         yield None
@@ -428,28 +441,53 @@ class SequencerClient(QtGui.QWidget):
         self.addDltRow.updateParameters(parameter_values)
         self.setSizes()
 
-    def update_sequencer(self, c, signal_json):
+    def receive_sequencer_update(self, c, signal_json):
         signal = json.loads(signal_json)
-        if signal:
-            for message_type, message in signal.items():
-                if message_type == 'channel_manual_outputs':
-                    channel_infos = {
-                        k: v
-                            for device_name, device_channels in message.items()
-                            for k, v in device_channels.items()
-                        }
-                    for k, v in channel_infos.items():
-                        if k in self.digital_channels:
-                            self.digitalClient.nameColumn.labels[k].updateManualOutput(v)
-                elif message_type == 'channel_modes':
-                    channel_infos = {
-                        k: v
-                            for device_name, device_channels in message.items()
-                            for k, v in device_channels.items()
-                        }
-                    for k, v in channel_infos.items():
-                        if k in self.digital_channels:
-                            self.digitalClient.nameColumn.labels[k].updateMode(v)
+        for message_type, message in signal.items():
+            if message_type == 'channel_manual_outputs':
+                channel_infos = {
+                    k: v
+                        for device_name, device_channels in message.items()
+                        for k, v in device_channels.items()
+                    }
+                for k, v in channel_infos.items():
+                    if k in self.digital_channels:
+                        self.digitalClient.nameColumn.labels[k].updateManualOutput(v)
+            elif message_type == 'channel_modes':
+                channel_infos = {
+                    k: v
+                        for device_name, device_channels in message.items()
+                        for k, v in device_channels.items()
+                    }
+                for k, v in channel_infos.items():
+                    if k in self.digital_channels:
+                        self.digitalClient.nameColumn.labels[k].updateMode(v)
+    
+    def receive_conductor_update(self, c, signal_json):
+        signal = json.loads(signal_json)
+        for message_type, message in signal.items():
+            if message_type in ['set_parameter_values', 'get_parameter_values']:
+                update = {
+                    name.replace('sequencer.', '*'): value
+                        for name, value in message.items()
+                    }
+                self.sequence_parameters.update(update)
+                self.analogClient.displaySequence(self.sequence)
+    
+    @inlineCallbacks
+    def get_sequence_parameters(self):
+        conductor = yield self.cxn.get_server(self.conductor_servername)
+        parameter_names = get_sequence_parameters(self.sequence)
+        request = {
+            parameter_name.replace('*', 'sequencer.'): None
+                for parameter_name in parameter_names
+            }
+        parameter_values_json = yield conductor.get_parameter_values(json.dumps(request))
+        parameter_values = json.loads(parameter_values_json)
+        self.sequence_parameters = {
+            name.replace('sequencer.', '*'): value 
+                for name, value in parameter_values.items()
+            }
 
     def getSequence(self):
         durations = [b.value() for b in self.durationRow.boxes 
