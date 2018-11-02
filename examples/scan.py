@@ -38,7 +38,7 @@ parameter_values = {
     }
 
 if __name__ == '__main__':
-    from experiment import Experiment
+    from conductor.experiment import Experiment
     my_experiment = Experiment(
         name=name,
         reload_parameters=reload_parameters,
