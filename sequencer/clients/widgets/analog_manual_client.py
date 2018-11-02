@@ -28,7 +28,7 @@ class AnalogVoltageManualClient(QtGui.QGroupBox):
             self.reactor = reactor
             self.cxn = None
             self.parent = parent
-            self.sequencer_update_id = np.random.randint(0, 2**32 - 1)
+            self.sequencer_update_id = np.random.randint(0, 2**31 - 1)
             
             self.connect()
         except Exception, e:
@@ -40,9 +40,13 @@ class AnalogVoltageManualClient(QtGui.QGroupBox):
         if self.cxn is None:
             self.cxn = connection()
             yield self.cxn.connect()
+        print 1
         self.populateGUI()
+        print 2
         yield self.connectSignals()
+        print 3
         yield self.getChannelInfo()
+        print 4
         self.updateDisplay()
 
     @inlineCallbacks
@@ -88,7 +92,7 @@ class AnalogVoltageManualClient(QtGui.QGroupBox):
         self.timer.start(self.update_time)
 
     @inlineCallbacks
-    def getChannelInfo(self):
+    def getChannelInfo(self, x=None):
         server = yield self.cxn.get_server(self.sequencer_servername)
         request = {self.board_name: {self.name: None}}
         response_json = yield server.get_channel_infos(json.dumps(request))

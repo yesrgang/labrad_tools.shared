@@ -175,7 +175,7 @@ class AnalogVoltageEditor(QtGui.QDialog):
         self.cxn = cxn
         self.reactor = reactor
 
-        self.conductor_update_id = np.random.randint(0, 2**32 - 1)
+        self.conductor_update_id = np.random.randint(0, 2**31 - 1)
 
         self.loading = False
         self.connect()

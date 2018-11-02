@@ -1,10 +1,10 @@
 """
 ### BEGIN NODE INFO
 [info]
-name = opal_kelly
+name = ok
 version = 1.0
 description = 
-instancename = %LABRADNODE%_opal_kelly
+instancename = %LABRADNODE%_ok
 
 [startup]
 cmdline = %PYTHON% %FILE%
@@ -17,10 +17,10 @@ timeout = 20
 """
 
 import json
-from labrad.server import setting
 import os
-from twisted.internet.defer import inlineCallbacks
-from twisted.internet.defer import returnValue
+import time
+
+from labrad.server import setting
 
 import ok
 
@@ -121,8 +121,14 @@ class OKServer(HardwareInterfaceServer):
     @setting(101)
     def wait_trigger(self, c, interface_id, address, mask=0xffffffff):
         interface = self._get_interface(interface_id)
-        while not interface.IsTriggered(address, mask):
-            pass
+        interface.UpdateTriggerOuts()
+        is_triggered = interface.IsTriggered(address, mask)
+        while True:
+            interface.UpdateTriggerOuts()
+            is_triggered = interface.IsTriggered(address, mask)
+            if is_triggered:
+                return
+            time.sleep(0.005)
 
 Server = OKServer
 

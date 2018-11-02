@@ -62,8 +62,8 @@ class SequencerClient(QtGui.QWidget):
 
     def __init__(self, reactor, cxn=None):
         super(SequencerClient, self).__init__(None)
-        self.sequencer_update_id = np.random.randint(0, 2**32 - 1)
-        self.conductor_update_id = np.random.randint(0, 2**32 - 1)
+        self.sequencer_update_id = np.random.randint(0, 2**31 - 1)
+        self.conductor_update_id = np.random.randint(0, 2**31 - 1)
         self.name = '{} - client'.format(self.sequencer_servername)
         self.reactor = reactor
         self.cxn = cxn
@@ -79,7 +79,8 @@ class SequencerClient(QtGui.QWidget):
             self.populate()
             yield self.displaySequence(self.default_sequence)
             yield self.connectSignals()
-            yield self.get_sequence_parameters()
+            yield self.getChannels()
+#            yield self.get_sequence_parameters()
         except Exception, e:
             raise e
 
@@ -443,24 +444,39 @@ class SequencerClient(QtGui.QWidget):
     def receive_sequencer_update(self, c, signal_json):
         signal = json.loads(signal_json)
         for message_type, message in signal.items():
+            channel_manual_outputs = {}
+            channel_modes = {}
+            if message_type == 'channel_infos':
+                channel_modes = {
+                    k: v['mode']
+                        for device_name, device_channels in message.items()
+                        for k, v in device_channels.items()
+                    }
+                channel_manual_outputs = {
+                    k: v['manual_output']
+                        for device_name, device_channels in message.items()
+                        for k, v in device_channels.items()
+                    }
             if message_type == 'channel_manual_outputs':
-                channel_infos = {
+                channel_manual_outputs = {
                     k: v
                         for device_name, device_channels in message.items()
                         for k, v in device_channels.items()
                     }
-                for k, v in channel_infos.items():
-                    if k in self.digital_channels:
-                        self.digitalClient.nameColumn.labels[k].updateManualOutput(v)
             elif message_type == 'channel_modes':
-                channel_infos = {
+                channel_modes = {
                     k: v
                         for device_name, device_channels in message.items()
                         for k, v in device_channels.items()
                     }
-                for k, v in channel_infos.items():
-                    if k in self.digital_channels:
-                        self.digitalClient.nameColumn.labels[k].updateMode(v)
+            
+            for k, v in channel_manual_outputs.items():
+                if k in self.digital_channels:
+                    label = self.digitalClient.nameColumn.labels[k]
+                    label.updateManualOutput(v)
+            for k, v in channel_modes.items():
+                if k in self.digital_channels:
+                    self.digitalClient.nameColumn.labels[k].updateMode(v)
     
     def receive_conductor_update(self, c, signal_json):
         signal = json.loads(signal_json)
@@ -472,6 +488,8 @@ class SequencerClient(QtGui.QWidget):
                     }
                 self.sequence_parameters.update(update)
                 self.analogClient.displaySequence(self.sequence)
+#                self.sequence_parameters.update(update)
+#                self.analogClient.displaySequence(self.sequence)
     
     @inlineCallbacks
     def get_sequence_parameters(self):
