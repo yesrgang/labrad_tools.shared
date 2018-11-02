@@ -34,13 +34,10 @@ class ECDLClient(QtGui.QGroupBox):
 
     @inlineCallbacks
     def select_device(self):
-        print self.servername
         server = yield self.cxn.get_server(self.servername)
         request = {self.name: None}
         info_json = yield server.get_device_infos(json.dumps(request))
         info = json.loads(info_json)
-        print info
-        print info[self.name]
         for key, value in info[self.name].items():
             setattr(self, key, value)
     
@@ -122,8 +119,6 @@ class ECDLClient(QtGui.QGroupBox):
     def receive_update(self, c, signal_json):
         signal = json.loads(signal_json)
         for message_type, message in signal.items():
-            print message_type
-            print message
             device_message = message.get(self.name)
             if (message_type == 'states') and (device_message is not None):
                 self.free = False
@@ -148,7 +143,6 @@ class ECDLClient(QtGui.QGroupBox):
         if self.free:
             server = yield self.cxn.get_server(self.servername)
             is_on = yield server.state()
-            print 'state', is_on
             if is_on:
                 yield server.shutdown()
             else:
