@@ -19,7 +19,7 @@ from device_server.exceptions import DeviceGetInfoFailed
 class DeviceServer(ThreadedServer):
     devices = {}
     update = Signal(np.random.randint(0, 2**32 - 1), 'signal: update', 's')
-    autostart = True
+    autostart = False
     
     def initServer(self):
         self.device_directory = os.path.join(os.getenv('PROJECT_LABRAD_TOOLS_PATH'), self.name, 'devices/')
