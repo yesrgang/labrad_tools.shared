@@ -690,6 +690,20 @@ class ConductorServer(ThreadedServer):
             self.experiment_queue.appendleft(experiment)
         else:
             self.experiment_queue.append(experiment)
+    
+    @setting(8)
+    def clear_experiment_queue(self, c):
+        self._clear_experiment_queue()
+    
+    def _clear_experiment_queue(self):
+        self.experiment_queue = deque([])
+    
+    @setting(9)
+    def stop_experiment(self, c):
+        self._stop_experiment()
+
+    def _stop_experiment(self):
+        self.experiment = {}
 
     def _advance_experiment(self):
         """ pop experiment from queue """
@@ -717,7 +731,7 @@ class ConductorServer(ThreadedServer):
         else:
             self.experiment = {}
     
-    @setting(8)
+    @setting(10)
     def advance(self, c):
         self._advance()
     
@@ -757,6 +771,9 @@ class ConductorServer(ThreadedServer):
                 elif shot_number:
                     print "experiment ({}): shot {} of {}".format(name, 
                             shot_number, remaining_points + shot_number)
+            else:
+                self._advance_parameter_values()
+
             self._update_parameters()
         except:
             raise AdvanceError()

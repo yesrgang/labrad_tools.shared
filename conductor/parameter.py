@@ -138,7 +138,7 @@ class ConductorParameter(object):
             self.value = self.value_queue.popleft()
         
         # append value to end of queue if looping
-        elif loop:
+        if loop and self.value_queue:
             self.value_queue.append(self.value)
 
     def _advance(self, loop):
