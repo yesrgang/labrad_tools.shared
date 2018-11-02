@@ -19,6 +19,7 @@ class CurrentControllerClient(QtGui.QGroupBox):
     mouseHover = pyqtSignal(bool)
     state = None
     qt_style = 'Gtk+'
+    i = 0
     
     def __init__(self, reactor, cxn=None):
         QtGui.QDialog.__init__(self)
@@ -131,6 +132,8 @@ class CurrentControllerClient(QtGui.QGroupBox):
 #            yield getattr(server, parameter)()
 # 
     def receive_update(self, c, signal_json):
+        print 'update', self.i
+        self.i += 1
         self.free = False
         signal = json.loads(signal_json)
         for message_type, message in signal.items():
@@ -216,7 +219,7 @@ class MultipleClientContainer(QtGui.QWidget):
         self.layout = QtGui.QHBoxLayout()
         for client in self.client_list:
             self.layout.addWidget(client)
-        self.setFixedSize(200 * len(self.client_list), 130)
+        self.setFixedSize(210 * len(self.client_list), 140)
         self.setLayout(self.layout)
 
     def closeEvent(self, x):
