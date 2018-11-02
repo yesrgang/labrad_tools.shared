@@ -431,7 +431,6 @@ class SequencerClient(QtGui.QWidget):
         yield conductor.addListener(listener=self.receive_conductor_update, 
                                     source=None, ID=self.conductor_update_id)
 
-
     def updateParameters(self):
         yield None
         parameter_values = {}
