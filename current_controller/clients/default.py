@@ -8,42 +8,60 @@ from twisted.internet.defer import inlineCallbacks
 
 from client_tools.connection import connection
 
+class ParameterLabel(QtGui.QLabel):
+    clicked = QtCore.pyqtSignal()
+    
+    def mousePressEvent(self, x):
+        self.clicked.emit()
+    
+
 class CurrentControllerClient(QtGui.QGroupBox):
     mouseHover = pyqtSignal(bool)
+    state = None
+    qt_style = 'Gtk+'
     
-    def __init__(self, reactor):
+    def __init__(self, reactor, cxn=None):
         QtGui.QDialog.__init__(self)
         self.reactor = reactor
+        self.cxn = cxn
         self.connect()
 
     @inlineCallbacks
     def connect(self):
-        self.cxn = connection()
-        cname = '{} - {} - client'.format(self.servername, self.name)
-        yield self.cxn.connect(name=cname)
-        yield self.getDeviceInfo()
-        self.populateGUI()
-        yield self.connectSignals()
-        yield self.requestValues()
+        try:
+            if self.cxn is None:
+                self.cxn = connection()
+                cname = '{} - {} - client'.format(self.servername, self.name)
+                yield self.cxn.connect(name=cname)
+            yield self.getDeviceInfo()
+            self.populateGUI()
+            yield self.connectSignals()
+            yield self.requestValues()
+        except Exception, e:
+            print e
+            raise
 
     @inlineCallbacks
     def getDeviceInfo(self):
         server = yield self.cxn.get_server(self.servername)
         request = {self.name: None}
+        yield server.initialize_devices(json.dumps(request))
         device_info_json = yield server.get_device_infos(json.dumps(request))
         device_info = json.loads(device_info_json)
-        for key, value in device_info.items():
+        for key, value in device_info[self.name].items():
             setattr(self, key, value)
 
     def populateGUI(self):
         self.state_button = QtGui.QPushButton()
         self.state_button.setCheckable(1)
+        self.current_label = ParameterLabel('Current [A]: ')
         self.current_box = QtGui.QDoubleSpinBox()
         self.current_box.setKeyboardTracking(False)
         self.current_box.setRange(*self.current_range)
         self.current_box.setSingleStep(self.current_stepsize)
         self.current_box.setDecimals(abs(int(np.floor(np.log10(self.current_stepsize)))))
         self.current_box.setAccelerated(True)
+        self.power_label = ParameterLabel('Power [mW]: ')
         self.power_box = QtGui.QDoubleSpinBox()
         self.power_box.setReadOnly(True)
         self.power_box.setButtonSymbols(QtGui.QAbstractSpinBox.NoButtons)
@@ -51,12 +69,12 @@ class CurrentControllerClient(QtGui.QGroupBox):
         self.layout = QtGui.QGridLayout()
         self.layout.addWidget(QtGui.QLabel('<b>'+self.name+'</b>'), 1, 0, 1, 1, QtCore.Qt.AlignHCenter)
         self.layout.addWidget(self.state_button, 1, 1)
-        self.layout.addWidget(QtGui.QLabel('Current [A]: '), 2, 0, 1, 1, QtCore.Qt.AlignRight)
+        self.layout.addWidget(self.current_label, 2, 0, 1, 1, QtCore.Qt.AlignRight)
         self.layout.addWidget(self.current_box, 2, 1)
-        self.layout.addWidget(QtGui.QLabel('Power [mW]: '), 3, 0, 1, 1, QtCore.Qt.AlignRight)
+        self.layout.addWidget(self.power_label, 3, 0, 1, 1, QtCore.Qt.AlignRight)
         self.layout.addWidget(self.power_box, 3, 1)
         self.setLayout(self.layout)
-        self.setFixedSize(200, 100)
+        self.setFixedSize(200, 120)
 
     @inlineCallbacks
     def connectSignals(self):
@@ -74,12 +92,19 @@ class CurrentControllerClient(QtGui.QGroupBox):
         self.state_button.released.connect(self.onNewState)
         self.current_box.valueChanged.connect(self.onNewCurrent)
         
-        self.setMouseTracking(True)
-#        self.mouseHover.connect(self.requestValues)
+        #self.setMouseTracking(True)
+        #self.mouseHover.connect(self.requestValues)
+        self.power_label.clicked.connect(self.requestPower)
         
         self.timer = QtCore.QTimer(self)
         self.timer.timeout.connect(self.writeValues)
         self.timer.start(self.update_time)
+
+    @inlineCallbacks
+    def requestValues(self, c=None):
+        yield self.requestState()
+        yield self.requestCurrent()
+        yield self.requestPower()
 
     @inlineCallbacks
     def requestState(self, c=None):
@@ -109,27 +134,35 @@ class CurrentControllerClient(QtGui.QGroupBox):
         self.free = False
         signal = json.loads(signal_json)
         for message_type, message in signal.items():
-            channel_message = message.get(self.name)
-            if (message_type == 'states') and (channel_message is not None):
-                if channel_message:
+            device_message = message.get(self.name)
+            if (message_type == 'states') and (device_message is not None):
+                if device_message:
                     self.state_button.setChecked(1)
                     self.state_button.setText('On')
+                    self.state = True
                 else:
                     self.state_button.setChecked(0)
                     self.state_button.setText('Off')
-            if (message_type == 'currents') and (channel_message is not None):
-                self.current_box.setValue(message)
-            if (message_type == 'powers') and (channel_message is not None):
-                self.power_box.setValue(message)
+                    self.state = False
+            if (message_type == 'currents') and (device_message is not None):
+                self.current_box.setValue(device_message)
+            if (message_type == 'powers') and (device_message is not None):
+                self.power_box.setValue(device_message * 1e3)
         self.free = True
     
     @inlineCallbacks
     def onNewState(self):
         if self.free:
             server = yield self.cxn.get_server(self.servername)
-            is_on = yield server.state()
-            if is_on != self.state_button.isChecked():
-                print 'send state change to server'
+            request = {self.name: None}
+            response = yield server.states(json.dumps(request))
+            server_state = json.loads(response)[self.name]
+            if server_state == self.state:
+                request = {self.name: None}
+                if self.state:
+                    yield server.shutdown(json.dumps(request))
+                else:
+                    yield server.warmup(json.dumps(request))
 
     def onNewCurrent(self):
         if self.free:
@@ -155,7 +188,13 @@ class CurrentControllerClient(QtGui.QGroupBox):
     def disable(self):
         self.setDisabled(True)
 
+    @inlineCallbacks
     def closeEvent(self, x):
+        server = yield self.cxn.get_server(self.servername)
+        yield server.signal__update(self.update_id)
+        yield server.removeListener(listener=self.receive_update, source=None, 
+                                 ID=self.update_id)
+        x.accept()
         self.reactor.stop()
 
 class MultipleClientContainer(QtGui.QWidget):
@@ -177,7 +216,7 @@ class MultipleClientContainer(QtGui.QWidget):
         self.layout = QtGui.QHBoxLayout()
         for client in self.client_list:
             self.layout.addWidget(client)
-        self.setFixedSize(200 * len(self.client_list), 120)
+        self.setFixedSize(200 * len(self.client_list), 130)
         self.setLayout(self.layout)
 
     def closeEvent(self, x):
