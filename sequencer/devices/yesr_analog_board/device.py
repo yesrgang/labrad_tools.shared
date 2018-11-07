@@ -12,7 +12,7 @@ from sequencer.devices.yesr_analog_board.helpers import get_ramp_bytes
 class YeSrAnalogBoard(YeSrSequencerBoard):
     sequencer_type = 'analog'
 
-    ok_bitfilename = 'analog_sequencer-v3.1.1.bit'
+    ok_bitfilename = 'analog_sequencer-v3.1.2.bit'
     
     channel_mode_wire = 0x09
     manual_voltage_wires = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]

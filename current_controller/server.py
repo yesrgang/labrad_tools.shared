@@ -18,8 +18,10 @@ timeout = 5
 import json
 
 from labrad.server import setting
+from twisted.internet import reactor
 
 from device_server.server import DeviceServer
+
 
 class CurrentControllerServer(DeviceServer):
     """ Provides basic control for current controllers """
@@ -211,4 +213,5 @@ Server = CurrentControllerServer
 
 if __name__ == '__main__':
     from labrad import util
+    reactor.suggestThreadPoolSize(5)
     util.runServer(Server())

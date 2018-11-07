@@ -78,6 +78,7 @@ class SequencerServer(DeviceServer):
                 channel_response = channel.get_info()
                 device_response.update({channel_name: channel_response})
             response.update({device_name: device_response})
+        self._send_update({'channel_infos': response})
         return response
     
     @setting(11)
@@ -184,6 +185,21 @@ class SequencerServer(DeviceServer):
         self._send_update({'sequence': response})
         return response
 
+#   @setting(114)
+#    def set_sequence_fast(self, c, request_json='{}'):
+#        request = json.loads(request_json)
+#        response = self._set_sequence_fast(request)
+#    
+#    def _set_sequence_fast(self, request={}):
+#        for device_name, device_request in request.items():
+#            reactor.callInThread(self._set_device_sequence_fast, device_name, 
+#                                 device_request)
+#
+#    def _set_device_sequence_fast(self, name, request=None):
+#        device = self._get_device(name)
+#        if request is not None:
+#            device.set_sequence(request)
+#
     @setting(15)
     def running(self, c, request_json='{}'):
         request = json.loads(request_json)
@@ -207,10 +223,9 @@ class SequencerServer(DeviceServer):
         self._send_update({'running': response})
         return response
     
-
-    
 Server = SequencerServer()
     
 if __name__ == "__main__":
     from labrad import util
+    reactor.suggestThreadPoolSize(4)
     util.runServer(Server)

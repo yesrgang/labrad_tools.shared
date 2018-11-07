@@ -60,4 +60,6 @@ Server = PicomotorServer
 
 if __name__ == '__main__':
     from labrad import util
+    from twisted.internet import reactor
+    reactor.suggestThreadPoolSize(1)
     util.runServer(Server())

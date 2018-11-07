@@ -64,7 +64,7 @@ class Picoscope(DefaultDevice):
     def record(self, data_path):
         pass
 
-    def retrive(self, record_name):
+    def retrive_record(self, record_name):
         if type(record_name).__name__ == 'int':
             record_name = self.record_names[record_name]
         if record_name not in self.records:

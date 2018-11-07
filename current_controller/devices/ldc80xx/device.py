@@ -2,7 +2,8 @@ import json
 import numpy as np
 import time
 
-from twisted.internet.reactor import callInThread
+from twisted.internet.reactor import callInThread, callLater
+from twisted.internet import reactor
 
 from device_server.device import DefaultDevice
 from visa_server.proxy import VisaProxy
@@ -26,6 +27,8 @@ class Ldc80xx(DefaultDevice):
     default_current = 0
 
     update_parameters = ['state', 'current', 'power']
+
+    power = None
 
     def initialize(self, config):
         super(Ldc80xx, self).initialize(config)
@@ -68,12 +71,12 @@ class Ldc80xx(DefaultDevice):
         command = ':ILD:SET {}'.format(current)
         
         self.write_to_slot(command)
-        self.power = self.get_power()
 
     def get_power(self):
         command = ':POPT:ACT?'
         response = self.query_to_slot(command)
-        return float(response[10:])
+        power = float(response[10:])
+        return power
     
     def set_power(self, power):
         # could raise ldc80xx SetPowerError: cannot set ldc80xx power

@@ -23,7 +23,7 @@ from device_server.server import DeviceServer
 class RFServer(DeviceServer):
     """ Provides basic control for RF sources """
     name = 'rf'
-#    autostart = False
+    autostart = True
 
     @setting(10)
     def states(self, c, request_json='{}'):
