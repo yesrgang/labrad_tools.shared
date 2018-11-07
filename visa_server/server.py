@@ -15,21 +15,26 @@ message = 987654321
 timeout = 20
 ### END NODE INFO
 """
-from labrad.server import setting
+import os
 
+from labrad.server import setting
 import visa
 
 from hardware_interface_server.server import HardwareInterfaceServer
 from hardware_interface_server.exceptions import InterfaceNotAvailable
 
-VISA_LIBRARY = '@py'
-
 class VISAServer(HardwareInterfaceServer):
     """Provides direct access to VISA-enabled hardware."""
     name = '%LABRADNODE%_visa'
 
+    def _get_rm(self):
+        if os.name == 'nt':
+            return visa.ResourceManager()
+        else:
+            return visa.ResourceManager('@py')
+
     def _get_available_interfaces(self):
-        rm = visa.ResourceManager(VISA_LIBRARY)
+        rm = self._get_rm()
         available_interfaces = list(rm.list_resources())
         return available_interfaces
 
@@ -41,7 +46,7 @@ class VISAServer(HardwareInterfaceServer):
         return self.interfaces.keys()
     
     def _open_interface(self, interface_id):
-        rm = visa.ResourceManager(VISA_LIBRARY)
+        rm = self._get_rm()
         if interface_id in self.interfaces:
             return
 #            raise InterfaceAlreadyOpen(interface_id)

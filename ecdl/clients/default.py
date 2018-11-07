@@ -35,6 +35,8 @@ class ECDLClient(QtGui.QGroupBox):
     @inlineCallbacks
     def select_device(self):
         server = yield self.cxn.get_server(self.servername)
+        request = {self.name: {}}
+        yield server.initialize_devices(json.dumps(request))
         request = {self.name: None}
         info_json = yield server.get_device_infos(json.dumps(request))
         info = json.loads(info_json)
@@ -142,11 +144,15 @@ class ECDLClient(QtGui.QGroupBox):
     def onNewState(self):
         if self.free:
             server = yield self.cxn.get_server(self.servername)
-            is_on = yield server.state()
-            if is_on:
-                yield server.shutdown()
-            else:
-                yield server.warmup()
+            request = {self.name: None}
+            response = yield server.states(json.dumps(request))
+            server_state = json.loads(response)[self.name]
+            if server_state == self.state:
+                request = {self.name: None}
+                if self.state:
+                    yield server.shutdown(json.dumps(request))
+                else:
+                    yield server.warmup(json.dumps(request))
 
     def onNewPiezoVoltage(self):
         if self.free:
