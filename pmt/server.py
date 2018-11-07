@@ -75,7 +75,7 @@ class PMTServer(DeviceServer):
 
     def _retrive_device_records(self, name, request):
         device = self._get_device(name)
-        response = device.retrive_records(request)
+        response = device.retrive_record(request)
         return response
     
 Server = PMTServer

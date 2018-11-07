@@ -207,6 +207,10 @@ class AD9956(DefaultDevice):
             message = "End frequency must be greater than start frequency."
             raise Exception(message)
 
+    def get_linear_ramp(self):
+        return None
+        
+
     def set_frequency(self, frequency, board=0, output='low'):
         """ select single frequency output mode at specified frequency
 

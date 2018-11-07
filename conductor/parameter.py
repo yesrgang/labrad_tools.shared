@@ -41,12 +41,14 @@ class ConductorParameter(object):
     """
     autostart = False
     call_in_thread = False
-    priority = 1
+    priority = None
     value_type = 'single'
     value = None
     value_queue = deque([])
 #    next_value = None
     previous_value = None
+
+    verbose = False
     
     def initialize(self, config={}):
         for k, v in config.items():
@@ -103,7 +105,7 @@ class ConductorParameter(object):
             self.value = value
 
         elif self.value_type == 'data':
-            self.value = data
+            self.value = value
 
         return self.value
 
@@ -136,6 +138,8 @@ class ConductorParameter(object):
         # set value
         if self.value_queue:
             self.value = self.value_queue.popleft()
+        if self.value_type in ['once']:
+            self.value = None
         
         # append value to end of queue if looping
         if loop and self.value_queue:

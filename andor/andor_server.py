@@ -20,7 +20,7 @@ import sys
 
 from labrad.server import Signal, setting
 
-from server_tools.device_server import DeviceServer
+from device_server.old_server import DeviceServer
 
 UPDATE_ID = 693334
 
@@ -29,7 +29,7 @@ class AndorServer(DeviceServer):
     update = Signal(UPDATE_ID, 'signal: update', 's')
     name = '%LABRADNODE%_andor'
 
-    @setting(10, record_path='ss', record_type='s', recorder_config='s', returns='b')
+    @setting(10, record_path='s', record_type='s', recorder_config='s', returns='b')
     def record(self, c, record_path, record_type, recorder_config='{}'):
         """ record 
         Args:
@@ -39,7 +39,7 @@ class AndorServer(DeviceServer):
         Returns:
             bool, success
         """
-        device = self.get_device(c)
+        device = self.get_selected_device(c)
         device.record(record_path, record_type, recorder_config)
         return True
     
@@ -68,7 +68,7 @@ class AndorServer(DeviceServer):
                     }
             }
         """
-        device = self.get_device(c)
+        device = self.get_selected_device(c)
         settings = json.loads(settings_json)
         sums = device.process(settings)
         return json.dumps(sums)

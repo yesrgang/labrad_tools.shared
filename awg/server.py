@@ -44,7 +44,7 @@ class AWGServer(DeviceServer):
             try:
                 device_response = self._waveform(device_name, waveform)
             except:
-                self._reload_device(device_name)
+                self._reload_device(device_name, {})
                 device_response = self._waveform(device_name, waveform)
             response.update({device_name: device_response})
         self._send_update({'waveforms': response})

@@ -144,6 +144,9 @@ class AD9959(DefaultDevice):
             self.ser.write(command)
 #            self.serial_server.write(self.serial_address, ''.join(instruction_set))
 
+    def get_linear_ramp(self):
+        pass
+
     def set_state(self, state):
         pass
 
