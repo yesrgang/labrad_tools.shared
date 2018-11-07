@@ -1,26 +1,25 @@
-class ClientConfig(object):
-    def __init__(self):
-        self.servername = 'rf'
-        self.name = 'alpha'
-        self.update_id = 461013
+from rf.clients.rf_client import RFClient
 
-        self.frequency_display_units = [(9, 'GHz')]
-        self.frequency_digits = 6
-        self.amplitude_display_units = [(0, 'dBm')]
-        self.amplitude_digits = 2
-        self.update_time = 100
+class AlphaClient(RFClient):
+    servername = 'rf'
+    name = 'alpha'
 
-        # widget sizes
-        self.spinbox_width = 100
+    frequency_display_units = [(9, 'GHz')]
+    frequency_digits = 6
+    amplitude_display_units = [(0, 'dBm')]
+    amplitude_digits = 2
+    update_time = 100
+
+    spinbox_width = 100
+
+Client = AlphaClient
 
 if __name__ == '__main__':
     from PyQt4 import QtGui
-    from rf.clients.rf_client import RFClient
-    a = QtGui.QApplication([])
+    app = QtGui.QApplication([])
     import client_tools.qt4reactor as qt4reactor
     qt4reactor.install()
     from twisted.internet import reactor
-    
-    widget = RFClient(ClientConfig(), reactor)
+    widget = Client(reactor)
     widget.show()
     reactor.run()

@@ -1,14 +1,15 @@
 from PyQt4 import QtGui, QtCore
-import numpy as np
-import json
-import sys
 import h5py
+import json
 import matplotlib as mpl
-from twisted.internet.defer import inlineCallbacks
+import numpy as np
+import os
+import sys
 from time import strftime
 
-from client_tools.connection import connection
+from twisted.internet.defer import inlineCallbacks
 
+from client_tools.connection import connection
 import pyqtgraph as pg
 from cmap_to_colormap import cmapToColormap
 
@@ -23,7 +24,7 @@ class ImageViewer(QtGui.QWidget):
     servername = 'yesr10_andor'
     update_id = 734520
 #    data_directory = '/home/yertle/yesrdata/SrQ/data/{}/'
-    data_directory = 'Z:\\SrQ\\data\\{}\\{}'
+    data_directory = os.path.join(os.getenv('PROJECT_DATA_PATH'), 'data')
     name = 'ikon'
 
     def __init__(self, reactor):

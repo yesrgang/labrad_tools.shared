@@ -8,20 +8,20 @@ def json_defaults(obj):
 class Experiment(object):
     def __init__(self, **kw):
         self.name = kw.get('name', 'default')
-        self.reload_parameters = kw.get('reload_parameters', {})
+        self.parameters = kw.get('parameters', {})
         self.parameter_values = kw.get('parameter_values', {})
         self.loop = kw.get('loop', False)
 
-    def queue(self, run_immedeately=False):
+    def queue(self, run_immediately=False):
         cxn = labrad.connect()
         request = {
             'name': self.name,
-            'reload_parameters': self.reload_parameters,
+            'parameters': self.parameters,
             'parameter_values': self.parameter_values,
             'loop': self.loop,
             }
         request_json = json.dumps(request, default=json_defaults)
-        if run_immedeately:
+        if run_immediately:
             cxn.conductor.queue_experiment(request_json, True)
             cxn.conductor.stop_experiment()
         else:

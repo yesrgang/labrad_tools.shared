@@ -9,51 +9,67 @@ from client_tools.connection import connection
 from client_tools.widgets import SuperSpinBox
 
 class RFClient(QtGui.QGroupBox):
-    def __init__(self, config, reactor, cxn=None):
+    update_id = None
+    frequency_display_units = None
+    frequency_digits = None
+    amplitude_display_units = None
+    amplitude_digits = None
+    offset_display_units = None
+    offset_digits = None
+    offset_range = None
+    
+    def __init__(self, reactor, cxn=None):
         QtGui.QDialog.__init__(self)
         self.reactor = reactor
         self.cxn = cxn 
         self.set_defaults()
-        self.load_config(config)
-        self.connect()
+        self.initialize()
 
     def set_defaults(self):
-        self.frequency_display_units = [(-6, 'uHz'), (-3, 'mHz'), (0, 'Hz'), 
-                (3, 'kHz'), (6, 'MHz'), (9, 'GHz')]
-        self.frequency_digits = 4
-        self.amplitude_display_units = [(0, '?')]
-        self.amplitude_digits = 4        
-        self.offset_display_units = [(0, 'V')]
-        self.offset_digits = 4
-        self.offset_range = [0, 0]
-
-    def load_config(self, config=None):
-        if type(config).__name__ == 'str':
-            config = __import__(config).ControlConfig()
-        if config is not None:
-            self.config = config
-        for key, value in self.config.__dict__.items():
-            setattr(self, key, value)
+        if getattr(self, 'update_id') is None:
+            self.update_id = np.random.randint(0, 2**31-1)
+        if getattr(self, 'frequency_display_units') is None:
+            self.frequency_display_units = [(-6, 'uHz'), (-3, 'mHz'), (0, 'Hz'),
+                                            (3, 'kHz'), (6, 'MHz'), (9, 'GHz')]
+        if getattr(self, 'frequency_digits') is None:
+            self.frequency_digits = 4
+        if getattr(self, 'amplitude_display_units') is None:
+            self.amplitude_display_units = [(0, '')]
+        if getattr(self, 'amplitude_digits') is None:
+            self.amplitude_digits = 4        
+        if getattr(self, 'offset_display_units') is None:
+            self.offset_display_units = [(0, 'V')]
+        if getattr(self, 'offset_digits') is None:
+            self.offset_digits = 4
+        if getattr(self, 'offset_range') is None:
+            self.offset_range = [0, 0]
 
     @inlineCallbacks
-    def connect(self):
+    def initialize(self):
         if self.cxn is None:
             self.cxn = connection()
             cname = '{} - {} - client'.format(self.servername, self.name)
             yield self.cxn.connect()
-        self.context = yield self.cxn.context()
-        yield self.select_device()
+        yield self.initialize_device()
+        yield self.get_device_info()
         self.populateGUI()
         yield self.connectSignals()
         yield self.requestValues()
 
     @inlineCallbacks
-    def select_device(self):
+    def initialize_device(self):
         server = yield self.cxn.get_server(self.servername)
-        config = yield server.select_device(self.name)
-        for key, value in json.loads(config).items():
-            setattr(self, key, value)
-        self.load_config()
+        request = {self.name: {}}
+        yield server.initialize_devices(json.dumps(request))
+
+    @inlineCallbacks
+    def get_device_info(self):
+        server = yield self.cxn.get_server(self.servername)
+        request = {self.name: {}}
+        response_json = yield server.get_device_infos(json.dumps(request))
+        response = json.loads(response_json)
+        for k, v in response[self.name].items():
+            setattr(self, k, v)
     
     def populateGUI(self):
         self.state_button = QtGui.QPushButton()
@@ -108,7 +124,7 @@ class RFClient(QtGui.QGroupBox):
             self.layout.addWidget(self.offset_box, row, 1)
 
 
-        self.setWindowTitle(self.name + '_control')
+        self.setWindowTitle('{} - {} - client'.format(self.servername, self.name))
         self.setLayout(self.layout)
         self.setFixedSize(100 + self.spinbox_width, height)
 
@@ -138,36 +154,50 @@ class RFClient(QtGui.QGroupBox):
     def requestValues(self, c=None):
         server = yield self.cxn.get_server(self.servername)
         for parameter in self.update_parameters:
-            yield getattr(server, parameter)()
+            if parameter == 'frequency':
+                method_name = 'frequencies'
+            else:
+                method_name = parameter + 's'
+            method = getattr(server, method_name)
+            request = {self.name: None}
+            yield method(json.dumps(request))
  
-    def receive_update(self, c, signal):
-        signal = json.loads(signal)
-        for name, d in signal.items():
-            self.free = False
-            if name == self.name:
-                if 'state' in self.update_parameters:
-                    if d['state']:
-                        self.state_button.setChecked(1)
-                        self.state_button.setText('On')
-                    else:
-                        self.state_button.setChecked(0)
-                        self.state_button.setText('Off')
+    def receive_update(self, c, signal_json):
+        signal = json.loads(signal_json)
+        self.free = False
+        for message_type, message in signal.items():
+            device_message = message.get(self.name)
+            if (message_type == 'states') and (device_message is not None):
+                if device_message:
+                    self.state_button.setChecked(1)
+                    self.state_button.setText('On')
+                    self.state = True
+                else:
+                    self.state_button.setChecked(0)
+                    self.state_button.setText('Off')
+                    self.state = False
                 
+            if (message_type == 'frequencies') and (device_message is not None):
                 if 'frequency' in self.update_parameters:
-                    self.frequency_box.display(d['frequency'])
-    
+                    self.frequency_box.display(device_message)
+            if (message_type == 'amplitudes') and (device_message is not None):
                 if 'amplitude' in self.update_parameters:
-                    self.amplitude_box.display(d['amplitude'])
+                    self.amplitude_box.display(device_message)
+            if (message_type == 'offsets') and (device_message is not None):
                 if 'offset' in self.update_parameters:
-                    self.offset_box.display(d['offset'])
+                    self.offset_box.display(device_message)
         self.free = True
     
     @inlineCallbacks
     def onNewState(self):
         if self.free:
             server = yield self.cxn.get_server(self.servername)
-            is_on = yield server.state()
-            yield server.state(not is_on)
+            request = {self.name: None}
+            response = yield server.states(json.dumps(request))
+            server_state = json.loads(response)[self.name]
+            if server_state == self.state:
+                request = {self.name: not self.state}
+                yield server.states(json.dumps(request))
 
     def onNewFrequency(self):
         if self.free:
@@ -184,17 +214,20 @@ class RFClient(QtGui.QGroupBox):
     @inlineCallbacks
     def writeValues(self):
         if self.hasNewFrequency:
-            server = yield self.cxn.get_server(self.servername)
-            yield server.frequency(self.frequency_box.value())
             self.hasNewFrequency = False
+            server = yield self.cxn.get_server(self.servername)
+            request = {self.name: self.frequency_box.value()}
+            yield server.frequencies(json.dumps(request))
         elif self.hasNewAmplitude:
-            server = yield self.cxn.get_server(self.servername)
-            yield server.amplitude(self.amplitude_box.value())
             self.hasNewAmplitude = False
-        elif self.hasNewOffset:
             server = yield self.cxn.get_server(self.servername)
-            yield server.offset(self.offset_box.value())
+            request = {self.name: self.amplitude_box.value()}
+            yield server.amplitudes(json.dumps(request))
+        elif self.hasNewOffset:
             self.hasNewOffset = False
+            server = yield self.cxn.get_server(self.servername)
+            request = {self.name: self.offset_box.value()}
+            yield server.offsets(json.dumps(request))
            
     def reinitialize(self):
         self.setDisabled(False)
@@ -205,23 +238,21 @@ class RFClient(QtGui.QGroupBox):
     def closeEvent(self, x):
         self.reactor.stop()
 
-class MultipleRFClient(QtGui.QWidget):
-    def __init__(self, config_list, reactor, cxn=None):
+class MultipleWidgetsContainer(QtGui.QWidget):
+    def __init__(self,reactor):
         QtGui.QDialog.__init__(self)
-        self.config_list = config_list
         self.reactor = reactor
-        self.cxn = cxn
-        self.connect()
+        self.initialize()
  
-    def connect(self):
+    def initialize(self):
         self.populateGUI()
 
     def populateGUI(self):
         self.layout = QtGui.QHBoxLayout()
-        for config in self.config_list:
-            widget = RFClient(config, self.reactor)
+        for WidgetClass in self.widgets:
+            widget = WidgetClass(self.reactor)
             self.layout.addWidget(widget)
-        self.setFixedSize(650, 120)
+        self.setFixedSize(220 * len(self.widgets), 120)
         self.setLayout(self.layout)
 
     def closeEvent(self, x):

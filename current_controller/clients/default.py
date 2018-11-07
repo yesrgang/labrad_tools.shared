@@ -177,10 +177,12 @@ class CurrentControllerClient(QtGui.QGroupBox):
     @inlineCallbacks
     def writeValues(self):
         if self.hasNewCurrent:
+            self.hasNewCurrent = False
             server = yield self.cxn.get_server(self.servername)
             request = {self.name: self.current_box.value()}
             yield server.currents(json.dumps(request))
-            self.hasNewCurrent = False
+            request = {self.name: None}
+            yield self.requestPower()
 
     def enterEvent(self, c):
         self.mouseHover.emit(True)
@@ -201,6 +203,7 @@ class CurrentControllerClient(QtGui.QGroupBox):
         self.reactor.stop()
 
 class MultipleClientContainer(QtGui.QWidget):
+    name = None
     def __init__(self, client_list, reactor, cxn=None):
         QtGui.QDialog.__init__(self)
         self.client_list = client_list
@@ -220,6 +223,7 @@ class MultipleClientContainer(QtGui.QWidget):
         for client in self.client_list:
             self.layout.addWidget(client)
         self.setFixedSize(210 * len(self.client_list), 140)
+        self.setWindowTitle(self.name)
         self.setLayout(self.layout)
 
     def closeEvent(self, x):
