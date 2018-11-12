@@ -51,7 +51,7 @@ class PicomotorServer(DeviceServer):
 
     def _position(self, name, position):
         device = self._get_device(name)
-        if position:
+        if position is not None:
             device.set_position(position)
         response = device.get_position()
         return response
