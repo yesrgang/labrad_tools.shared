@@ -209,7 +209,7 @@ class YeSrSequencerBoard(DefaultDevice):
                     for parameter_name in parameter_names
                 }
             conductor_server = self.cxn[self.conductor_servername]
-            parameter_values_json = conductor_server.get_parameter_values(json.dumps(request))
+            parameter_values_json = conductor_server.get_next_parameter_values(json.dumps(request))
             parameter_values = json.loads(parameter_values_json)
         else:
             parameter_values = {}
