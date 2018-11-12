@@ -582,6 +582,71 @@ class ConductorServer(ThreadedServer):
         except:
             raise ParameterGetValueError(name)
         return value
+    
+    @setting(106, request_json='s', all='b')
+    def get_next_parameter_values(self, c, request_json='{}', all=False):
+        """ get next parameter values specified in the request 
+        
+        This method makes the private method "_get_next_parameter_values" available
+        over labrad. Look at that method's documentation for exactly how 
+        the parameter values are set
+        
+        Args:
+            (str) request_json: A json dumped dict specifying
+                {<(str) parameter_name>: None}
+            (bool) all: if True, return all next_parameter_values.
+
+        Returns:
+            (str) json dumped dict 
+                {<(str) parameter_name>: <next_parameter_value>}
+        """
+        request = json.loads(request_json)
+        response = self._get_next_parameter_values(request, all)
+        self._send_update({'get_next_parameter_values': response})
+        response_json = json.dumps(response, default=lambda x: None)
+        return response_json 
+    
+    def _get_next_parameter_values(self, request={}, all=True):
+        """ get next parameter values specified in the request.
+
+        Args:
+            (dict) request: {<(str) parameter_name>: None}
+        Returns:
+            (dict) {<(str) parameter_name>: <next_parameter_value>}
+        """
+        if (request == {}) and all:
+            active_parameters = self._get_active_parameters()
+            request = {
+                parameter_name: None
+                    for parameter_name, ParameterClass 
+                    in active_parameters.items()
+                }
+        response = {}
+        for parameter_name in request:
+            next_parameter_value = self._get_next_parameter_value(parameter_name)
+            response.update({parameter_name: next_parameter_value})
+        return response
+            
+    def _get_next_parameter_value(self, name):
+        """ handle getting next value of a single parameter 
+
+        Args:
+            (str) name: name of parameter next_value to be got.
+        Returns:
+            response of parameter's get_next_value method.
+        Raises:
+            ParameterGetValueError: raised if we catch some generic error in 
+                the get_value process.
+        """
+        value = None
+        try:
+            parameter = self._get_parameter(name, initialize=True, generic=True)
+            value = parameter._get_next_value()
+            # test if we will be able to flatten to json
+            value_json = json.dumps({name: value})
+        except:
+            raise ParameterGetValueError(name)
+        return value
 
     def _advance_parameter_values(self):
         """ advance values in each parameter's value_queue 
