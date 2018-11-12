@@ -85,13 +85,14 @@ class ConductorParameter(object):
 
         elif self.value_type == 'list':
             if not hasattr(value, '__iter__'):
-                message = (
-                        "conductor parameter ({} {}) has value_type 'list'."
-                        "trying to assign value with no attr '__iter__'."
-                        .format(self.device_name, self.name)
-                        )
-                raise Exception(message)
-            if len(value) > 1:
+                self.value = value
+#                message = (
+#                        "conductor parameter ({}) has value_type 'list'."
+#                        "trying to assign value with no attr '__iter__'."
+#                        .format(self.name)
+#                        )
+#                raise Exception(message)
+            elif len(value) > 1:
                 if hasattr(value[0], '__iter__'):
                     self.value_queue = deque([v for v in value])
                 else:
@@ -100,6 +101,13 @@ class ConductorParameter(object):
             else:
                 self.value_queue = deque([])
                 self.value_queue = deque([value])
+        
+        elif self.value_type == 'dict':
+            if type(value).__name__ == 'list':
+                self.value_queue = deque([v for v in value])
+            else:
+                self.value_queue = deque([])
+                self.value = value
 
         elif self.value_type == 'once':
             self.value = value
@@ -121,6 +129,15 @@ class ConductorParameter(object):
     def _get_value(self):
         try:
             return self.get_value()
+        except:
+            raise ParameterGetValueError(self.name)
+    
+    def get_next_value(self):
+        return self.next_value
+    
+    def _get_next_value(self):
+        try:
+            return self.get_next_value()
         except:
             raise ParameterGetValueError(self.name)
     
