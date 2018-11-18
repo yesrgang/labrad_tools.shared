@@ -110,11 +110,11 @@ class ConductorServer(ThreadedServer):
     verbose = False
 
     def initServer(self):
-        self._initialize_parameters(request={}, all=True)
+        self._initialize_parameters(request={}, all=True, suppress_errors=True)
     
     def stopServer(self):
         self._save_parameter_values()
-        self._terminate_parameters(request={}, all=True)
+        self._terminate_parameters(request={}, all=True, suppress_errors=True)
 
     @setting(0)
     def get_configured_parameters(self, c):
@@ -240,7 +240,8 @@ class ConductorServer(ThreadedServer):
         response_json = json.dumps(response, default=lambda x: None)
         return response_json
     
-    def _initialize_parameters(self, request={}, all=False):
+    def _initialize_parameters(self, request={}, all=False, 
+                               suppress_errors=False):
         """ initialize parameters specified in the request.
         
         Args:
@@ -265,8 +266,12 @@ class ConductorServer(ThreadedServer):
                 })
         response = {}
         for parameter_name, additional_config in request.items():
-            parameter_response = self._initialize_parameter(parameter_name, additional_config)
-            response.update({parameter_name: parameter_response})
+            try:
+                parameter_response = self._initialize_parameter(parameter_name, additional_config)
+                response.update({parameter_name: parameter_response})
+            except:
+                if not suppress_errors:
+                    raise
         return response
     
     def _initialize_parameter(self, name, config):
@@ -350,7 +355,8 @@ class ConductorServer(ThreadedServer):
         response_json = json.dumps(response, default=lambda x: None)
         return response_json
     
-    def _terminate_parameters(self, request={}, all=False):
+    def _terminate_parameters(self, request={}, all=False, 
+                              suppress_errors=False):
         """ terminate parameters specified in the request.
         
         Args:
@@ -370,8 +376,12 @@ class ConductorServer(ThreadedServer):
                 }
         response = {}
         for parameter_name, _ in request.items():
-            parameter_response = self._terminate_parameter(parameter_name)
-            response.update({parameter_name: parameter_response})
+            try:
+                parameter_response = self._terminate_parameter(parameter_name)
+                response.update({parameter_name: parameter_response})
+            except:
+                if not suppress_errors:
+                    raise
         return response
    
     def _terminate_parameter(self, name):
@@ -648,7 +658,7 @@ class ConductorServer(ThreadedServer):
             raise ParameterGetValueError(name)
         return value
 
-    def _advance_parameter_values(self):
+    def _advance_parameter_values(self, suppress_errors=False):
         """ advance values in each parameter's value_queue 
         
         Args: 
@@ -659,11 +669,15 @@ class ConductorServer(ThreadedServer):
         active_parameters = self._get_active_parameters().keys()
         ti = time.time()
         for parameter_name in active_parameters:
-            _ti = time.time()
-            self._advance_parameter_value(parameter_name)
-            _tf = time.time()
-            if (_tf - _ti > 0.01) and self.verbose:
-                print parameter_name, _tf - _ti
+            try:
+                _ti = time.time()
+                self._advance_parameter_value(parameter_name)
+                _tf = time.time()
+                if (_tf - _ti > 0.01) and self.verbose:
+                    print parameter_name, _tf - _ti
+            except:
+                if not suppress_errors:
+                    raise
         if self.verbose:
             print "advanced parameter values in {} s".format(time.time() - ti)
     
@@ -691,7 +705,7 @@ class ConductorServer(ThreadedServer):
             raise
 
     
-    def _update_parameters(self):
+    def _update_parameters(self, suppress_errors=False):
         """ call each parameter's update method 
 
         the order in which the updates are called is determined by each 
@@ -705,7 +719,11 @@ class ConductorServer(ThreadedServer):
         """
         ti = time.time()
         for parameter_name in sort_by_priority(self.parameters):
-            self._update_parameter(parameter_name)
+            try:
+                self._update_parameter(parameter_name)
+            except:
+                if not suppress_errors:
+                    raise
         if self.verbose:
             print 'updated parameters in {} s'.format(time.time() - ti)
 
@@ -826,10 +844,10 @@ class ConductorServer(ThreadedServer):
             self.experiment = {}
     
     @setting(10)
-    def advance(self, c):
-        self._advance()
+    def advance(self, c, suppress_errors=False):
+        self._advance(suppress_errors)
     
-    def _advance(self):
+    def _advance(self, suppress_errors=False):
         # prevent multiple advances from happening at the same time
         if self.is_advancing:
             raise AlreadyAdvancing()
@@ -859,7 +877,7 @@ class ConductorServer(ThreadedServer):
                     self.experiment['repeat_shot'] = False
                     remaining_points += 1
                 else:
-                    self._advance_parameter_values()
+                    self._advance_parameter_values(suppress_errors=suppress_errors)
                 #print "experiment ({}): remaining points: {}".format(self.experiment['name'], remaining_points)
                 name = self.experiment.get('name')
                 shot_number = self.experiment.get('shot_number')
@@ -869,13 +887,14 @@ class ConductorServer(ThreadedServer):
                     print "experiment ({}): shot {} of {}".format(name, 
                             shot_number + 1, remaining_points + shot_number)
             else:
-                self._advance_parameter_values()
-            self._update_parameters()
+                self._advance_parameter_values(suppress_errors=suppress_errors)
+            self._update_parameters(suppress_errors=suppress_errors)
             tf = time.time()
             if self.verbose:
                 print 'advanced in {} s'.format(tf - ti)
         except:
-            raise AdvanceError()
+            if not suppress_errors:
+                raise
         finally:
             self.is_advancing = False
     
