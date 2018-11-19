@@ -22,6 +22,7 @@ import json
 import os
 import sys
 import time
+import traceback
 
 from server_tools.threaded_server import ThreadedServer
 from labrad.server import setting
@@ -49,11 +50,6 @@ from conductor.exceptions import AdvanceError
 from conductor.helpers import sort_by_priority
 from conductor.helpers import get_remaining_points
 from conductor.parameter import ConductorParameter
-
-# TODO device server is wrong. everything is just a parameter. 
-# specify hierarchy with each parameter name being dotted.
-# name is determined by <directory name>.<module name>
-# this way we can nest parameters as much or as little as we please.
 
 # threads are used for executing parameter updates asynchronously
 # "threadPoolSize" limits number of parameter updates that can 
@@ -136,7 +132,7 @@ class ConductorServer(ThreadedServer):
         response_json = json.dumps(response, default=lambda x: None)
         return response_json
     
-    def _get_configured_parameters(self):
+    def _get_configured_parameters(self, suppress_errors=False):
         """ Get names of parameters available to the conductor.
         
         Look in directory "self.parameter_directory" for configured parameters.
@@ -179,9 +175,15 @@ class ConductorServer(ThreadedServer):
                     parameter_names.append(dotted_relative_path)
         
         for parameter_name in parameter_names:
-            ParameterClass = self._import_parameter(parameter_name)
-            if ParameterClass:
-                response.update({parameter_name: ParameterClass})
+            try:
+                ParameterClass = self._import_parameter(parameter_name)
+                if ParameterClass:
+                    response.update({parameter_name: ParameterClass})
+            except ParameterImportError:
+                traceback.print_exc()
+            except:
+                if not suppress_errors:
+                    raise
         return response
     
     @setting(1)
@@ -203,7 +205,7 @@ class ConductorServer(ThreadedServer):
         response_json = json.dumps(response, default=lambda x: None)
         return response_json
     
-    def _get_active_parameters(self):
+    def _get_active_parameters(self, suppress_errors=False):
         """ Get names of parameters actively being managed by the conductor.
 
         parameters are stored in the attribute self.parameters
@@ -213,7 +215,11 @@ class ConductorServer(ThreadedServer):
         Returns:
             (dict) {<(str) parameter_name>: <parameter>}
         """
-        return self.parameters
+        try:
+            return self.parameters
+        except:
+            if not suppress_errors:
+                raise
 
     @setting(2, request_json='s', all='b')
     def initialize_parameters(self, c, request_json='{}', all=False):
@@ -256,8 +262,8 @@ class ConductorServer(ThreadedServer):
                 where initialization_response is the returned value of 
                 <parameter>.initialize(parameter_config)
         """
-        if all:
-            configured_parameters = self._get_configured_parameters()
+        if (request == {}) and all:
+            configured_parameters = self._get_configured_parameters(suppress_errors)
             request.update({
                 parameter_name: {}
                     for parameter_name, ParameterClass 
@@ -676,6 +682,7 @@ class ConductorServer(ThreadedServer):
                 if (_tf - _ti > 0.01) and self.verbose:
                     print parameter_name, _tf - _ti
             except:
+                traceback.print_exc()
                 if not suppress_errors:
                     raise
         if self.verbose:
@@ -702,6 +709,7 @@ class ConductorServer(ThreadedServer):
         except ParameterNotActiveError:
             return
         except:
+            traceback.print_exc()
             raise
 
     
@@ -751,7 +759,11 @@ class ConductorServer(ThreadedServer):
         if parameter.call_in_thread:
             reactor.callInThread(parameter.update)
         else:
-            parameter.update()
+            try:
+                parameter.update()
+            except:
+                traceback.print_exc()
+                raise ParameterUpdateError(name)
         tf = time.time()
 
         if self.verbose or parameter.verbose:
@@ -912,7 +924,7 @@ class ConductorServer(ThreadedServer):
 
         return self.parameters[name]
     
-    def _import_parameter(self, parameter_name):
+    def _import_parameter(self, parameter_name, suppress_errors=False):
         module_path = '{}.parameters.{}'.format(self.name, parameter_name)
         parameter_class_name = 'Parameter'
         try:
@@ -927,10 +939,16 @@ class ConductorServer(ThreadedServer):
         except ImportError as e:
             module_name = module_path.split('.')[-1]
             if str(e) == 'No module named {}'.format(module_name):
-                raise ParameterNotFoundError(parameter_name)
-            raise ParameterImportError(parameter_name)
+                traceback.print_exc()
+                if not suppress_errors:
+                    raise ParameterNotFoundError(parameter_name)
+            traceback.print_exc()
+            if not suppress_errors:
+                raise ParameterImportError(parameter_name)
         except:
-            raise ParameterImportError(parameter_name)
+            traceback.print_exc()
+            if not suppress_errors:
+                raise ParameterImportError(parameter_name)
     
     def _create_generic_parameter(self, parameter_name):
         class GenericParameterClass(ConductorParameter):

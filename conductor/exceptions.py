@@ -3,7 +3,7 @@ import sys
 
 class ConductorException(Exception):
     def __init__(self, message=None):
-        traceback.print_exc()
+#        traceback.print_exc()
         super(ConductorException, self).__init__(message)
 
 class ParameterImportError(ConductorException):

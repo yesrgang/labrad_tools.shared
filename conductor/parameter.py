@@ -1,5 +1,6 @@
 from collections import deque
 from labrad import connect
+import traceback
 
 from conductor.exceptions import ParameterInitializationError
 from conductor.exceptions import ParameterTerminationError
@@ -58,6 +59,7 @@ class ConductorParameter(object):
         try:
             return self.initialize(config)
         except:
+            traceback.print_exc()
             raise ParameterInitializationError(self.name)
     
     def terminate(self):
@@ -68,6 +70,7 @@ class ConductorParameter(object):
         try:
             return self.terminate()
         except:
+            traceback.print_exc()
             raise ParameterTerminationError(self.name)
 
     def connect_to_labrad(self):
@@ -121,6 +124,7 @@ class ConductorParameter(object):
         try:
             return self.set_value(value)
         except:
+            traceback.print_exc()
             raise ParameterSetValueError(self.name)
 
     def get_value(self):
@@ -130,6 +134,7 @@ class ConductorParameter(object):
         try:
             return self.get_value()
         except:
+            traceback.print_exc()
             raise ParameterGetValueError(self.name)
     
     def get_next_value(self):
@@ -139,6 +144,7 @@ class ConductorParameter(object):
         try:
             return self.get_next_value()
         except:
+            traceback.print_exc()
             raise ParameterGetValueError(self.name)
     
     @property
@@ -166,6 +172,7 @@ class ConductorParameter(object):
         try:
             return self.advance(loop)
         except:
+            traceback.print_exc()
             raise ParameterAdvanceError(self.name)
             
         
@@ -176,4 +183,5 @@ class ConductorParameter(object):
         try:
             return self.update()
         except:
+            traceback.print_exc()
             raise ParameterUpdateError(self.name)
