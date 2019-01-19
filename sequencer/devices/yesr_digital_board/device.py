@@ -6,12 +6,14 @@ from sequencer.devices.yesr_sequencer_board.device import YeSrSequencerBoard
 from sequencer.devices.yesr_sequencer_board.helpers import time_to_ticks
 from sequencer.devices.yesr_digital_board.helpers import get_output
 
-T_TRIGGER = 1e-3
+T_TRIGGER = 2e-3
+MAX_TICKS = 2**32 - 2**8 # last 8 bits reserverd for specifying external trigger
 
 class YeSrDigitalBoard(YeSrSequencerBoard):
     sequencer_type = 'digital'
 
-    ok_bitfilename = 'digital_sequencer-v3.1.bit'
+    #ok_bitfilename = 'digital_sequencer-v3.1.bit'
+    ok_bitfilename = 'digital_sequencer-v3.2.bit'
 
     channel_mode_wires = [0x01, 0x03, 0x05, 0x07]
     manual_invert_wires = [0x02, 0x04, 0x06, 0x08]
@@ -51,8 +53,10 @@ class YeSrDigitalBoard(YeSrSequencerBoard):
             # slaves will start on rising edge of master_channel
             for c in self.channels:
                 s = {'dt': T_TRIGGER, 'out': sequence[c.key][0]['out']}
-                sequence[c.key].insert(0, s)
+                sequence[c.key].insert(0, s.copy())
+                sequence[c.key].append(s.copy())
             sequence[self.master_channel][0]['out'] = False
+            sequence[self.master_channel][-1]['out'] = True
     
         # timestamp each state change for each channel sequence by summing over 
         # time intervals
@@ -61,6 +65,10 @@ class YeSrDigitalBoard(YeSrSequencerBoard):
             for s in sequence[c.key]:
                 dt = time_to_ticks(self.clk, s['dt'])
                 s.update({'dt': dt, 't': total_ticks})
+                if dt > MAX_TICKS:
+                    if c.key == self.master_channel:
+                        print "trigger mask:", bin(dt)[26:]
+                        s.update({'out': False})
                 total_ticks += dt
             sequence[c.key].append({'dt': 1, 't': total_ticks, 'out': sequence[c.key][-1]['out']})
 

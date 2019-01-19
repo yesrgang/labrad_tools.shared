@@ -8,11 +8,15 @@ from sequencer.devices.yesr_analog_board.helpers import seconds_to_ticks
 from sequencer.devices.yesr_analog_board.helpers import volts_to_bits
 from sequencer.devices.yesr_analog_board.helpers import get_ramp_bytes
 
+# max timestep for digital sequencer
+# (2**32 - 2**8) / (50 MHz)
+T_TRIGGER = 85.8993408 # [s]
 
 class YeSrAnalogBoard(YeSrSequencerBoard):
     sequencer_type = 'analog'
 
-    ok_bitfilename = 'analog_sequencer-v3.1.2.bit'
+    #ok_bitfilename = 'analog_sequencer-v3.1.2.bit'
+    ok_bitfilename = 'analog_sequencer-v3.2.bit'
     
     channel_mode_wire = 0x09
     manual_voltage_wires = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]
@@ -36,6 +40,7 @@ class YeSrAnalogBoard(YeSrSequencerBoard):
 
     def make_sequence_bytes(self, sequence):
         for channel in self.channels:
+            sequence[channel.key] = [s for s in sequence[channel.key] if s['dt'] < T_TRIGGER]
             channel_sequence = sequence[channel.key]
             channel.set_sequence(channel_sequence)
         

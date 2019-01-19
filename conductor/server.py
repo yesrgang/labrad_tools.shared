@@ -591,10 +591,14 @@ class ConductorServer(ThreadedServer):
         """
         value = None
         try:
+            _ti = time.time()
             parameter = self._get_parameter(name, initialize=True, generic=True)
             value = parameter._get_value()
+            _tf = time.time()
+            if (_tf - _ti > 0.001) and self.verbose:
+                print name, _tf - _ti
             # test if we will be able to flatten to json
-            value_json = json.dumps({name: value})
+#            value_json = json.dumps({name: value})
         except:
             raise ParameterGetValueError(name)
         return value
@@ -911,10 +915,10 @@ class ConductorServer(ThreadedServer):
             self.is_advancing = False
     
     def _get_parameter(self, name, initialize=False, generic=False):
-        configured_parameters = self._get_configured_parameters()
         active_parameters = self._get_active_parameters()
         if name not in active_parameters:
             if initialize:
+                configured_parameters = self._get_configured_parameters()
                 if name not in configured_parameters:
                     self._initialize_parameter(name, {'generic': generic})
                 else:

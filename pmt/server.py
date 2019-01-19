@@ -16,6 +16,8 @@ timeout = 20
 ### END NODE INFO
 """
 import json
+import traceback
+
 from labrad.server import setting
 
 from device_server.server import DeviceServer
@@ -39,6 +41,7 @@ class PMTServer(DeviceServer):
             try:
                 device_response = self._record_device(device_name, device_request)
             except:
+                traceback.print_exc()
                 self._reload_device(device_name, {})
                 device_response = self._record_device(device_name, device_request)
             response.update({device_name: device_response})
