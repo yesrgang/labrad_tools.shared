@@ -16,7 +16,7 @@ class DefaultDevice(object):
     update_parameters = []
 
     def initialize(self, config):
-        """ to be implemented by parent class """
+        """ to be implemented by child class """
 
     def _initialize(self, config):
         """ exception handling of initialize """
@@ -28,7 +28,7 @@ class DefaultDevice(object):
             raise DeviceInitializationFailed(self.name)
     
     def terminate(self):
-        """ to be implemented by parent class """
+        """ to be implemented by child class """
 
     def _terminate(self):
         """ exception handling of terminate """

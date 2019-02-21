@@ -221,4 +221,48 @@ class DeviceServer(ThreadedServer):
         update_json = json.dumps(update)
         self.update(update_json)
 
+    @setting(6, request_json='s', returns='s')
+    def call(self, c, request_json):
+        request = json.loads(request_json)
+        response = {}
+        for device_name, device_request in request.items():
+            device = self._get_device(device_name, True)
+            device_response = {}
+            for method_name, method_request in device_request.items():
+                method = getattr(device, method_name)
+                method_response = method(method_request)
+                device_response[method_name] = method_response
+            response[device_name] = device_response
+        return json.dumps(response)
+    
+    @setting(7, request_json='s', returns='s')
+    def set(self, c, request_json):
+        request = json.loads(request_json)
+        response = {}
+        for device_name, device_request in request.items():
+            device = self._get_device(device_name, True)
+            device_response = {}
+            for attribute_name, attribute_request in device_request.items():
+                setattr(device, attribute_name, attribute_request)
+#                attribute = getattr(device, attribute_name)
+                device_response[attribute_name] = attribute_request
+            response[device_name] = device_response
+        return json.dumps(response)
+    
+    @setting(8, request_json='s', returns='s')
+    def get(self, c, request_json):
+        request = json.loads(request_json)
+        response = {}
+        for device_name, device_request in request.items():
+            device = self._get_device(device_name, True)
+            device_response = {}
+            for attribute_name, attribute_request in device_request.items():
+                attribute = getattr(device, attribute_name)
+                device_response[attribute_name] = attribute
+            response[device_name] = device_response
+        return json.dumps(response)
+
+
+
+
 
