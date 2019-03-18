@@ -59,7 +59,7 @@ ERROR_CODE = {
 
 
 class AndorSDKProxy(object):
-    serial_number = None
+    serial_number = 0
     verbose = True
     error = {}
 

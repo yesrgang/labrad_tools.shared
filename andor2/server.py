@@ -59,7 +59,7 @@ class AndorServer(ThreadedServer):
         return error_code
 
     @setting(13, serial='i', returns='i')
-    def cooler_on(self, c):
+    def cooler_on(self, c, serial):
         cam = self._get_cam(serial)
         cam.CoolerON()
         error_code = cam.error['CoolerON']
@@ -335,7 +335,7 @@ class AndorServer(ThreadedServer):
         error_code = cam.error['SetImage']
         return error_code
 
-    @setting(52, serial='i', iHFlip='i', iVFlop='i', returns='i')
+    @setting(52, serial='i', iHFlip='i', iVFlip='i', returns='i')
     def set_image_flip(self, c, serial, iHFlip, iVFlip):
         cam = self._get_cam(serial)
         cam.SetImageFlip(iHFlip, iVFlip)
