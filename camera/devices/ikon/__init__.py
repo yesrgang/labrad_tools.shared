@@ -5,6 +5,7 @@ import json
 from device_server.device import DefaultDevice
 from andor_server.proxy import AndorSDKProxy
 
+
 class IKon(DefaultDevice):
     andor_servername = None
     andor_serialnumber = None
@@ -16,9 +17,6 @@ class IKon(DefaultDevice):
     def initialize(self, config):
         super(IKon, self).initialize(config)
         self.connect_to_labrad()
-        
-        self.andor_server = self.cxn[self.andor_servername]
-        self.andor = AndorSDKProxy(self.andor_server)
     
     def record(self, record_path=None, record_type=None, record_settings={}):
         """ To be implemented by child class """
