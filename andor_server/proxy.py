@@ -13,6 +13,7 @@ example usage:
     andor.CoolerON()
     andor.StartAcquisition()
 """
+import numpy as np
 import sys
 
 ERROR_CODE = {

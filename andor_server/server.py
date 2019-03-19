@@ -1,10 +1,10 @@
 """
 ### BEGIN NODE INFO
 [info]
-name = andor2
+name = andor
 version = 1.0
 description = 
-instancename = %LABRADNODE%_andor2
+instancename = %LABRADNODE%_andor
 
 [startup]
 cmdline = %PYTHON% %FILE%
@@ -22,7 +22,7 @@ from server_tools.threaded_server import ThreadedServer
 
 class AndorServer(ThreadedServer):
     """ Provides access to andor camera using pyandor """
-    name = '%LABRADNODE%_andor2'
+    name = '%LABRADNODE%_andor'
     cam = None
 
     def initServer(self):
@@ -310,7 +310,7 @@ class AndorServer(ThreadedServer):
         cam = self._get_cam(serial)
         cam.SetFastKineticsEx(exposedRows, seriesLength, time, mode, hbin, vbin,
                               offset)
-        error_code = cam.Error['SetFastKineticsEx']
+        error_code = cam.error['SetFastKineticsEx']
         return error_code
 
     @setting(49, serial='i', mode='i', returns='i')
@@ -330,7 +330,7 @@ class AndorServer(ThreadedServer):
     @setting(51, serial='i', hbin='i', vbin='i', hstart='i', hend='i', 
              vstart='i', vend='i', returns='i')
     def set_image(self, c, serial, hbin, vbin, hstart, hend, vstart, vend):
-        cam = selkkjjjkjkjkf._get_cam(serial)
+        cam = self._get_cam(serial)
         cam.SetImage(hbin, vbin, hstart, hend, vstart, vend)
         error_code = cam.error['SetImage']
         return error_code
