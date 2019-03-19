@@ -66,9 +66,6 @@ class AndorSDKProxy(object):
     def __init__(self, andor_server):
         self.andor_server = andor_server
     
-    def __del__(self):
-        self.ShutDown()
-    
     def _log(self, function, error):
         self.error[function] = error
         if self.verbose:
