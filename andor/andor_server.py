@@ -1,20 +1,20 @@
-"""
-### BEGIN NODE INFO
-[info]
-name = andor
-version = 1.0
-description = 
-instancename = %LABRADNODE%_andor
-
-[startup]
-cmdline = %PYTHON% %FILE%
-timeout = 60
-
-[shutdown]
-message = 987654321
-timeout = 5
-### END NODE INFO
-"""
+#"""
+#### BEGIN NODE INFO
+#[info]
+#name = andor
+#version = 1.0
+#description = 
+#instancename = %LABRADNODE%_andor
+#
+#[startup]
+#cmdline = %PYTHON% %FILE%
+#timeout = 60
+#
+#[shutdown]
+#message = 987654321
+#timeout = 5
+#### END NODE INFO
+#"""
 import json
 import sys
 

@@ -3,7 +3,7 @@ import json
 import numpy as np
 import os
 
-from twisted.internet.reactor import callInThread
+from twisted.internet import reactor
 from labrad.server import setting
 from labrad.server import Signal
 
@@ -220,5 +220,63 @@ class DeviceServer(ThreadedServer):
     def _send_update(self, update={}):
         update_json = json.dumps(update)
         self.update(update_json)
+
+    @setting(6, request_json='s', returns='s')
+    def call(self, c, request_json):
+        request = json.loads(request_json)
+        response = {}
+        for device_name, device_request in request.items():
+            device = self._get_device(device_name, True)
+            device_response = {}
+            for method_name, method_request in device_request.items():
+                method = getattr(device, method_name)
+                args = method_request.get('args', [])
+                kwargs = method_request.get('kwargs', {})
+                method_response = method(*args, **kwargs)
+                device_response[method_name] = method_response
+            response[device_name] = device_response
+        return json.dumps(response)
+    
+    @setting(7, request_json='s')
+    def call_in_thread(self, c, request_json):
+        request = json.loads(request_json)
+        response = {}
+        for device_name, device_request in request.items():
+            device = self._get_device(device_name, True)
+            device_response = {}
+            for method_name, method_request in device_request.items():
+                method = getattr(device, method_name)
+                args = method_request.get('args', [])
+                kwargs = method_request.get('kwargs', {})
+                reactor.callInThread(method, *args, **kwargs)
+    
+    @setting(8, request_json='s', returns='s')
+    def set(self, c, request_json):
+        request = json.loads(request_json)
+        response = {}
+        for device_name, device_request in request.items():
+            device = self._get_device(device_name, True)
+            device_response = {}
+            for attribute_name, attribute_request in device_request.items():
+                setattr(device, attribute_name, attribute_request)
+                device_response[attribute_name] = attribute_request
+            response[device_name] = device_response
+        return json.dumps(response)
+    
+    @setting(9, request_json='s', returns='s')
+    def get(self, c, request_json):
+        request = json.loads(request_json)
+        response = {}
+        for device_name, device_request in request.items():
+            device = self._get_device(device_name, True)
+            device_response = {}
+            for attribute_name, attribute_request in device_request.items():
+                attribute = getattr(device, attribute_name)
+                device_response[attribute_name] = attribute
+            response[device_name] = device_response
+        return json.dumps(response)
+
+
+
 
 

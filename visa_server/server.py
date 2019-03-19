@@ -24,7 +24,7 @@ from hardware_interface_server.server import HardwareInterfaceServer
 from hardware_interface_server.exceptions import InterfaceNotAvailable
 
 class VISAServer(HardwareInterfaceServer):
-    """Provides direct access to VISA-enabled hardware."""
+    """Provides direct access to VISA-enabled hardware via pyvisa"""
     name = '%LABRADNODE%_visa'
 
     def _get_rm(self):
