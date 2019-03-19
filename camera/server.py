@@ -18,6 +18,7 @@ timeout = 5
 import json
 
 from labrad.server import setting
+from labrad.server import setting
 from twisted.internet import reactor
 
 from device_server.server import DeviceServer
