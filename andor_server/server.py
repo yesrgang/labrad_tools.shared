@@ -17,7 +17,7 @@ timeout = 5
 """
 from labrad.server import setting
 
-from andor2.sdk import AndorSDK
+from andor_server.andor import AndorSDK
 from server_tools.threaded_server import ThreadedServer
 
 class AndorServer(ThreadedServer):
@@ -433,7 +433,7 @@ class AndorServer(ThreadedServer):
     def shut_down(self, c, serial):
         cam = self._get_cam(serial)
         cam.ShutDown()
-        error_code = cam.error['Shutdown']
+        error_code = cam.error['ShutDown']
         return error_code
 
     @setting(66, serial='i', returns='i')
