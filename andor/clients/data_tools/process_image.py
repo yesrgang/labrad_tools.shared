@@ -8,9 +8,11 @@ def process_image(image_path, record_type):
     for key in images_h5:
         images[key] = np.array(images_h5[key], dtype='float64')
     images_h5.close()
-    if record_type == 'record_g': 
+    #if record_type == 'record_g': 
+    if record_type == 'g': 
         return process_images_g(images)
-    elif record_type == 'record_eg':
+    #elif record_type == 'record_eg':
+    elif record_type == 'eg':
         return process_images_eg(images)
 
 def process_images_g(images):

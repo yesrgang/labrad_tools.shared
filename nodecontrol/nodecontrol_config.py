@@ -5,6 +5,9 @@ node_dict = {
     'node yesr9': [
         'visa',
         ],
+    'node yesr11': [
+        'plotter',
+        ],
     'node yesr20': [
         'visa',
         'serial',
@@ -13,7 +16,9 @@ node_dict = {
     'node yesr10': [
         'serial',
         'picoscope',
-        'andor',
+#        'andor',
+        'pmt',
+        'awg',
         'rf',
         'frequency_counter',
         'picomotor',
@@ -21,7 +26,7 @@ node_dict = {
         'ecdl',
         'spectrum_analyzer',
         'power_supply',
-        'sequencer',
-        'conductor',
+#        'sequencer',
+#        'conductor',
         ],
     }

@@ -25,7 +25,7 @@ class ImageViewer(QtGui.QWidget):
     update_id = 734520
 #    data_directory = '/home/yertle/yesrdata/SrQ/data/{}/'
     data_directory = os.path.join(os.getenv('PROJECT_DATA_PATH'), 'data')
-    name = 'ikon'
+    name = 'hr_ikon'
 
     def __init__(self, reactor):
         super(ImageViewer, self).__init__()
@@ -52,6 +52,8 @@ class ImageViewer(QtGui.QWidget):
         
         self.layout.addWidget(self.imageView)
         self.setLayout(self.layout)
+        self.setWindowTitle('{} - {} - client'.format(
+                            self.servername, self.name))
     
     @inlineCallbacks
     def connectSignals(self):
@@ -88,12 +90,14 @@ class ImageViewer(QtGui.QWidget):
                 record_path = value['record_path']
                 record_type = value['record_type']
                 image_path = self.data_directory.format(*record_path)
-                print 'ok'
+                image_path = os.path.join(self.data_directory, *record_path.split('/')) + '.hdf5'
+                print record_path
+                print image_path
                 self.plot(image_path, record_type)
         print 'done signal'
     
     def plot(self, image_path, record_type):
-        print image_path
+        print 'image path:', image_path
         image = process_image(image_path, record_type)
         image = np.rot90(image)
         self.imageView.setImage(image, autoRange=False, autoLevels=False)
