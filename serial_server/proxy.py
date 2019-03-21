@@ -1,3 +1,20 @@
+""" proxy for controlling serial devices on remote computer through labrad
+
+example usage:
+    
+    import labrad
+    from serial_server.proxy import SerialProxy
+    
+    cxn = labrad.connect()
+    serial = SerialProxy(cxn.yesr5_serial)
+    
+    # ``serial'' now acts like pyserial 3.x library
+    ser = serial.Serial('COM10')
+    ser.timeout = 0.1
+    ser.write('hello!\r\n')
+"""
+
+
 class SerialProxy(object):
     def __init__(self, serial_server):
         self.serial_server = serial_server
