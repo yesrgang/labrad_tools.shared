@@ -18,7 +18,7 @@ from device_server.exceptions import DeviceGetInfoFailed
 
 class DeviceServer(ThreadedServer):
     devices = {}
-    update = Signal(np.random.randint(0, 2**32 - 1), 'signal: update', 's')
+    update = Signal(np.random.randint(0, 2**31 - 1), 'signal: update', 's')
     autostart = False
     
     def initServer(self):
