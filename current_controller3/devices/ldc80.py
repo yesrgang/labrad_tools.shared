@@ -9,6 +9,7 @@ from visa_server.proxy import VisaProxy
 class LDC80(object):
     gpib_address = None
     pro8_slot = None
+    current_range = (0.0, 0.153)
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
