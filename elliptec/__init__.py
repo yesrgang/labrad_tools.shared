@@ -6,16 +6,13 @@ from serial_server.proxy import SerialProxy
 
 __path__ = extend_path(__path__, __name__)
 
-
 class ELLO(object):
     serial_port = None
     address = 0
 
-    def __init__(self, serial_port=None, address=None, serial=serial):
-        if serial_port is not None:
-            self.serial_port = serial_port
-        if address is not None:
-            self.address = address
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
         ser = serial.Serial(self.serial_port)
         ser.timeout = 1
         self._ser = ser
@@ -43,6 +40,7 @@ class ELLO(object):
 
 
 class ELLOProxy(ELLO):
-    def __init__(self, serial_server, serial_port=None, address=0):
+    def __init__(self, serial_server, **kwargs):
+        global serial
         serial = SerialProxy(serial_server)
-        super(ELLOProxy, self).__init__(serial_port, address, serial)
+        ELLO.__init__(self, **kwargs)
