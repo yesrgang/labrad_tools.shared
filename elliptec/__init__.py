@@ -11,7 +11,7 @@ class ELLO(object):
     serial_port = None
     address = 0
 
-    def __init__(self, serial_port=None, address=None):
+    def __init__(self, serial_port=None, address=None, serial=serial):
         if serial_port is not None:
             self.serial_port = serial_port
         if address is not None:
@@ -45,4 +45,4 @@ class ELLO(object):
 class ELLOProxy(ELLO):
     def __init__(self, serial_server, serial_port=None, address=0):
         serial = SerialProxy(serial_server)
-        super(ELLOProxy, self).__init__(serial_port, address)
+        super(ELLOProxy, self).__init__(serial_port, address, serial)
