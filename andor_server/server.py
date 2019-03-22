@@ -302,8 +302,17 @@ class AndorServer(ThreadedServer):
         cam.SetFanMode(mode)
         error_code = cam.error['SetFanMode']
         return error_code
-
+    
     @setting(48, serial='i', exposedRows='i', seriesLength='i', time='v', 
+             mode='i', hbin='i', vbin='i', returns='i')
+    def set_fast_kinetics(self, c, serial, exposedRows, seriesLength, time,
+                             mode, hbin, vbin):
+        cam = self._get_cam(serial)
+        cam.SetFastKinetics(exposedRows, seriesLength, time, mode, hbin, vbin)
+        error_code = cam.error['SetFastKinetics']
+        return error_code
+
+    @setting(49, serial='i', exposedRows='i', seriesLength='i', time='v', 
              mode='i', hbin='i', vbin='i', offset='i', returns='i')
     def set_fast_kinetics_ex(self, c, serial, exposedRows, seriesLength, time,
                              mode, hbin, vbin, offset):
@@ -313,21 +322,21 @@ class AndorServer(ThreadedServer):
         error_code = cam.error['SetFastKineticsEx']
         return error_code
 
-    @setting(49, serial='i', mode='i', returns='i')
+    @setting(50, serial='i', mode='i', returns='i')
     def set_frame_transfer_mode(self, c, serial, mode):
         cam = self._get_cam(serial)
         cam.SetFrameTransferMode(mode)
         error_code = cam.error['SetFrameTransferMode']
         return error_code
 
-    @setting(50, serial='i', typ='i', index='i', returns='i')
+    @setting(51, serial='i', typ='i', index='i', returns='i')
     def set_hs_speed(self, c, serial, typ, index):
         cam = self._get_cam(serial)
         cam.SetHSSpeed(typ, index)
         error_code = cam.error['SetHSSpeed']
         return error_code
 
-    @setting(51, serial='i', hbin='i', vbin='i', hstart='i', hend='i', 
+    @setting(52, serial='i', hbin='i', vbin='i', hstart='i', hend='i', 
              vstart='i', vend='i', returns='i')
     def set_image(self, c, serial, hbin, vbin, hstart, hend, vstart, vend):
         cam = self._get_cam(serial)
@@ -335,63 +344,63 @@ class AndorServer(ThreadedServer):
         error_code = cam.error['SetImage']
         return error_code
 
-    @setting(52, serial='i', iHFlip='i', iVFlip='i', returns='i')
+    @setting(53, serial='i', iHFlip='i', iVFlip='i', returns='i')
     def set_image_flip(self, c, serial, iHFlip, iVFlip):
         cam = self._get_cam(serial)
         cam.SetImageFlip(iHFlip, iVFlip)
         error_code = cam.error['SetImageFlip']
         return error_code
 
-    @setting(53, serial='i', iRotate='i', returns='i')
+    @setting(54, serial='i', iRotate='i', returns='i')
     def set_image_rotate(self, c, serial, iRotate):
         cam = self._get_cam(serial)
         cam.SetImageRotate(iRotate)
         error_code = cam.error['SetImageRotate']
         return error_code
 
-    @setting(54, serial='i', time='v', returns='i')
+    @setting(55, serial='i', time='v', returns='i')
     def set_kinetic_cycle_time(self, c, serial, time):
         cam = self._get_cam(serial)
         cam.SetKineticCycleTime(time)
         error_code = cam.error['SetKineticCycleTime']
         return error_code
 
-    @setting(55, serial='i', number='i', returns='i')
+    @setting(56, serial='i', number='i', returns='i')
     def set_number_accumulations(self, c, serial, number):
         cam = self._get_cam(serial)
         cam.SetNumberAccumulations(number)
         error_code = cam.error['SetNumberAccumulations']
         return error_code
 
-    @setting(56, serial='i', number='i', returns='i')
+    @setting(57, serial='i', number='i', returns='i')
     def set_number_kinetics(self, c, serial, number):
         cam = self._get_cam(serial)
         cam.SetNumberKinetics(number)
         error_code = cam.error['SetNumberKinetics']
         return error_code
 
-    @setting(57, serial='i', index='i', returns='i')
+    @setting(58, serial='i', index='i', returns='i')
     def set_output_amplifier(self, c, serial, index):
         cam = self._get_cam(serial)
         cam.SetOutputAmplifier(index)
         error_code = cam.error['SetOutputAmplifier']
         return error_code
 
-    @setting(58, serial='i', index='i', returns='i')
+    @setting(59, serial='i', index='i', returns='i')
     def set_pre_amp_gain(self, c, serial, index):
         cam = self._get_cam(serial)
         cam.SetPreAmpGain(index)
         error_code = cam.error['SetPreAmpGain']
         return error_code
 
-    @setting(59, serial='i', mode='i', returns='i')
+    @setting(60, serial='i', mode='i', returns='i')
     def set_read_mode(self, c, serial, mode):
         cam = self._get_cam(serial)
         cam.SetReadMode(mode)
         error_code = cam.error['SetReadMode']
         return error_code
 
-    @setting(60, serial='i', typ='i', mode='i', closingtime='i', 
+    @setting(61, serial='i', typ='i', mode='i', closingtime='i', 
              openingtime='i', returns='i')
     def set_shutter(self, c, serial, typ, mode, closingtime, openingtime):
         cam = self._get_cam(serial)
@@ -399,7 +408,7 @@ class AndorServer(ThreadedServer):
         error_code = cam.error['SetShutter']
         return error_code
 
-    @setting(61, serial='i', typ='i', mode='i', closingtime='i', 
+    @setting(62, serial='i', typ='i', mode='i', closingtime='i', 
              openingtime='i', extmode='i')
     def set_shutter_ex(self, c, serial, typ, mode, closingtime, openingtime, 
                        extmode):
@@ -408,42 +417,42 @@ class AndorServer(ThreadedServer):
         error_code = cam.error['SetShutterEx']
         return error_code
 
-    @setting(62, serial='i', temperature='i', returns='i')
+    @setting(63, serial='i', temperature='i', returns='i')
     def set_temperature(self, c, serial, temperature):
         cam = self._get_cam(serial)
         cam.SetTemperature(temperature)
         error_code = cam.error['SetTemperature']
         return error_code
 
-    @setting(63, serial='i', mode='i', returns='i')
+    @setting(64, serial='i', mode='i', returns='i')
     def set_trigger_mode(self, c, serial, mode):
         cam = self._get_cam(serial)
         cam.SetTriggerMode(mode)
         error_code = cam.error['SetTriggerMode']
         return error_code
 
-    @setting(64, serial='i', index='i', returns='i')
+    @setting(65, serial='i', index='i', returns='i')
     def set_vs_speed(self, c, serial, index):
         cam = self._get_cam(serial)
         cam.SetVSSpeed(index)
         error_code = cam.error['SetVSSpeed']
         return error_code
 
-    @setting(65, serial='i', returns='i')
+    @setting(66, serial='i', returns='i')
     def shut_down(self, c, serial):
         cam = self._get_cam(serial)
         cam.ShutDown()
         error_code = cam.error['ShutDown']
         return error_code
 
-    @setting(66, serial='i', returns='i')
+    @setting(67, serial='i', returns='i')
     def start_acquisition(self, c, serial):
         cam = self._get_cam(serial)
         cam.StartAcquisition()
         error_code = cam.error['StartAcquisition']
         return error_code
 
-    @setting(67, serial='i', returns='i')
+    @setting(68, serial='i', returns='i')
     def wait_for_acquisition(self, c, serial):
         cam = self._get_cam(serial)
         cam.WaitForAcquisition()

@@ -19,87 +19,86 @@ class SerialProxy(object):
     def __init__(self, serial_server):
         self.serial_server = serial_server
 
-    def Serial(self, comport):
-        ser = Serial(self.serial_server, comport)
+    def Serial(self, port):
+        ser = Serial(self.serial_server, port)
         return ser
 
 class Serial(object):
-    def __init__(self, serial_server, comport):
+    def __init__(self, serial_server, port):
         self.serial_server = serial_server
-        self.comport = comport
-        self.serial_server.reopen_interface(self.comport)
+        self.port = port
+        self.serial_server.reopen_interface(self.port)
 
     @property
     def baudrate(self):
-        return self.serial_server.baudrate(self.comport)
+        return self.serial_server.baudrate(self.port)
     
     @baudrate.setter
     def baudrate(self, baudrate):
-        self.serial_server.baudrate(self.comport, baudrate)
+        self.serial_server.baudrate(self.port, baudrate)
 
     @property
     def bytesize(self):
-        return self.serial_server.bytesize(self.comport)
+        return self.serial_server.bytesize(self.port)
     
     @bytesize.setter
     def bytesize(self, bytesize):
-        self.serial_server.bytesize(self.comport, bytesize)
+        self.serial_server.bytesize(self.port, bytesize)
     
     @property
     def dsrdtr(self):
-        return self.serial_server.dsrdtr(self.comport)
+        return self.serial_server.dsrdtr(self.port)
     
     @dsrdtr.setter
     def dsrdtr(self, dsrdtr):
-        self.serial_server.dsrdtr(self.comport, dsrdtr)
+        self.serial_server.dsrdtr(self.port, dsrdtr)
     
     @property
     def parity(self):
-        return self.serial_server.parity(self.comport)
+        return self.serial_server.parity(self.port)
     
     @parity.setter
     def parity(self, parity):
-        self.serial_server.parity(self.comport, parity)
+        self.serial_server.parity(self.port, parity)
     
     def read(self, size=1):
-        return self.serial_server.read(self.comport, size)
+        return self.serial_server.read(self.port, size)
     
     def read_until(self, expected='\n', size=1):
-        return self.serial_server.read_until(self.comport, expected, size)
+        return self.serial_server.read_until(self.port, expected, size)
     
     def readline(self, size=-1):
-        return self.serial_server.readline(self.comport, size)
+        return self.serial_server.readline(self.port, size)
     
     def readlines(self, size=-1):
-        return self.serial_server.readlines(self.comport, size)
+        return self.serial_server.readlines(self.port, size)
     
     @property
     def rtscts(self):
-        return self.serial_server.rtscts(self.comport)
+        return self.serial_server.rtscts(self.port)
     
     @rtscts.setter
     def rtscts(self, rtscts):
-        self.serial_server.rtscts(self.comport, rtscts)
+        self.serial_server.rtscts(self.port, rtscts)
     
     @property
     def stopbits(self):
-        return self.serial_server.stopbits(self.comport)
+        return self.serial_server.stopbits(self.port)
     
     @stopbits.setter
     def stopbits(self, stopbits):
-        self.serial_server.stopbits(self.comport, stopbits)
+        self.serial_server.stopbits(self.port, stopbits)
     
     @property
     def timeout(self):
-        return self.serial_server.timeout(self.comport)
+        return self.serial_server.timeout(self.port)
     
     @timeout.setter
     def timeout(self, timeout):
-        self.serial_server.timeout(self.comport, timeout)
+        self.serial_server.timeout(self.port, timeout)
     
     def write(self, data):
-        return self.serial_server.write(self.comport, data)
+        return self.serial_server.write(self.port, data)
     
     def writelines(self, data):
-        return self.serial_server.writelines(self.comport, data)
-    
+        return self.serial_server.writelines(self.port, data)

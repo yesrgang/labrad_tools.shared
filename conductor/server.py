@@ -319,6 +319,7 @@ class ConductorServer(ThreadedServer):
         except ParameterInitializationError:
             raise
         except:
+            traceback.print_exc()
             raise ParameterInitializationError(name)
 
     def _initialize_generic_parameter(self, name, config):
@@ -336,6 +337,7 @@ class ConductorServer(ThreadedServer):
         except ParameterInitializationError:
             raise
         except:
+            traceback.print_exc()
             raise ParameterInitializationError(name)
 
     @setting(3, request_json='s', all='b')
