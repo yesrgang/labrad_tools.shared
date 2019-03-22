@@ -628,6 +628,25 @@ class AndorSDK(object):
         error = self.dll.SetFanMode(mode)
         self._log(sys._getframe().f_code.co_name, error)
         return
+    
+    def SetFastKinetics(self, exposedRows, seriesLength, time, mode, hbin, 
+            vbin):
+        """ This function will set the parameters to be used when taking a fast 
+        kinetics acquisition.
+
+        Args:
+            exposedRows (int): sub-area height in rows.
+            seriesLength (int): number in series.
+            time (float): exposure time in seconds.
+            mode (int): binning mode (0 - FVB , 4 - Image).
+            hbin (int): horizontal binning.
+            vbin (int): vertical binning (only used when in image mode).
+        """
+        error = self.dll.SetFastKinetics(exposedRows, seriesLength, 
+                                           ctypes.c_float(time), mode, hbin, 
+                                           vbin)
+        self._log(sys._getframe().f_code.co_name, error)
+        return 
 
     def SetFastKineticsEx(self, exposedRows, seriesLength, time, mode, hbin, 
             vbin, offset):
