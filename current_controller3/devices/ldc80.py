@@ -64,7 +64,10 @@ class LDC80(object):
 class LDC80Proxy(LDC80):
     gpib_servername = None
 
-    def __init__(self, cxn, **kwargs):
+    def __init__(self, cxn=None, **kwargs):
+        if cxn == None:
+            import labrad
+            cxn = labrad.connect()
         global visa
         gpib_server = cxn[self.gpib_servername]
         visa = VisaProxy(gpib_server)

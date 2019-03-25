@@ -49,7 +49,10 @@ class ELLO(object):
 class ELLOProxy(ELLO):
     serial_servername = None
 
-    def __init__(self, cxn, **kwargs):
+    def __init__(self, cxn=None, **kwargs):
+        if cxn == None:
+            import labrad
+            cxn = labrad.connect()
         global serial
         serial_server = cxn[self.serial_servername]
         serial = SerialProxy(serial_server)
