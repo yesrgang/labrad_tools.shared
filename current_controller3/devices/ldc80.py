@@ -1,8 +1,3 @@
-import json
-import numpy as np
-import time
-import visa
-
 from visa_server2.proxy import VisaProxy
 
 
@@ -14,6 +9,8 @@ class LDC80(object):
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
+        if 'visa' not in globals():
+            import visa
         rm = visa.ResourceManager()
         self._inst = rm.open_resource(self.gpib_address)
 
