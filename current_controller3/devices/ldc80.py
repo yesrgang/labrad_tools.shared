@@ -51,9 +51,9 @@ class LDC80(object):
     def state(self):
         command = ':LASER?'
         response = self._query_to_slot(command)
-        if response == ':LASER ON':
+        if response.strip() == ':LASER ON':
             return True
-        elif response == ':LASER OFF':
+        elif response.strip() == ':LASER OFF':
             return False
 
     @state.setter
@@ -69,6 +69,6 @@ class LDC80Proxy(LDC80):
 
     def __init__(self, cxn, **kwargs):
         global visa
-        gpib_server = cxn[gpib_servername]
+        gpib_server = cxn[self.gpib_servername]
         visa = VisaProxy(gpib_server)
         LDC80.__init__(self, **kwargs)
