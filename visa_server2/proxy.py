@@ -39,10 +39,10 @@ class GPIBInstrumentProxy(object):
         """Read a string from the device.
 
         Reading stops when the device stops sending (e.g. by setting appropriate 
-        bus lines), or the termination characters sequence was detected. 
+        bus lines), or the termination characters sequence was detected.
         Attention: Only the last character of the termination characters is 
         really used to stop reading, however, the whole sequence is compared to 
-        the ending of the read string message. If they don’t match, a warning is 
+        the ending of the read string message. If they don't match, a warning is 
         issued.
 
         All line-ending characters are stripped from the end of the string.
@@ -59,7 +59,7 @@ class GPIBInstrumentProxy(object):
         """ The timeout in milliseconds for all resource I/O operations. """
         return self.server.get_timeout(self.resource_name)
     
-    @property.setter
+    @timeout.setter
     def timeout(self, timeout):
         """ The timeout in milliseconds for all resource I/O operations. """
         return self.server.set_timeout(self.resource_name, timeout)
