@@ -14,7 +14,6 @@ class LDC80(object):
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
-        print visa
         rm = visa.ResourceManager()
         self._inst = rm.open_resource(self.gpib_address)
 
@@ -66,7 +65,10 @@ class LDC80(object):
         self._write_to_slot(command)
 
 class LDC80Proxy(LDC80):
-    def __init__(self, visa_server, **kwargs):
+    gpib_servername = None
+
+    def __init__(self, cxn, **kwargs):
         global visa
-        visa = VisaProxy(visa_server)
+        gpib_server = cxn[gpib_servername]
+        visa = VisaProxy(gpib_server)
         LDC80.__init__(self, **kwargs)
