@@ -1,3 +1,5 @@
+import json
+
 class VisaProxy(object):
     def __init__(self, server):
         self.server = server
@@ -11,7 +13,7 @@ class ResourceManagerProxy(object):
         self.server = server
 
     def list_resources(self):
-        return self.server.get_available_interfaces()
+        return self.server.list_resources()
     
     def open_resource(self, resource_name):
         if 'GPIB' in resource_name:
@@ -19,8 +21,19 @@ class ResourceManagerProxy(object):
     
 class GPIBInstrumentProxy(object):
     def __init__(self, server, resource_name):
-        self.server = server
+        self._timeout = 3000
+        self._server = server
         self.resource_name = resource_name
+    
+    @property
+    def _resource_kwargs(self):
+        return {
+            'timeout': self._timeout,
+            }
+    
+    @property
+    def _resource_kwargs_json(self):
+        return json.dumps(self._resource_kwargs)
 
     def query(self, message, delay=None):
         """A combination of write(message) and read()
@@ -33,7 +46,8 @@ class GPIBInstrumentProxy(object):
             (str) the answer from the device.
 
         """ 
-        return self.server.query(self.resource_name, message, delay)
+        return self._server.query(self.resource_name, 
+                                  self._resource_kwargs_json, message, delay)
 
     def read(self, termination=None, encoding=None):
         """Read a string from the device.
@@ -52,17 +66,22 @@ class GPIBInstrumentProxy(object):
         Returns:
             (str) output from device
         """
-        return self.server.read(self.resource_name)
+        return self._server.read(self.resource_name, self._resource_kwargs_json, 
+                                termination, encoding)
     
     @property
     def timeout(self):
         """ The timeout in milliseconds for all resource I/O operations. """
-        return self.server.get_timeout(self.resource_name)
+        self._timeout = self._server.get_timeout(self.resource_name, 
+                                                 self._resource_kwargs_json)
+        return self._timeout
     
     @timeout.setter
     def timeout(self, timeout):
         """ The timeout in milliseconds for all resource I/O operations. """
-        return self.server.set_timeout(self.resource_name, timeout)
+        self._timeout = timeout
+        return self._server.set_timeout(self.resource_name, 
+                                        self._resource_kwargs_json, timeout)
 
     def write(self, message, termination=None, encoding=None):
         """ Write a string message to the device.
@@ -76,4 +95,6 @@ class GPIBInstrumentProxy(object):
         Returns:
             (int) number of bytes written
         """ 
-        return self.server.write(self.resource_name, message)
+        return self._server.write(self.resource_name, 
+                                  self._resource_kwargs_json, message, 
+                                  termination, encoding)

@@ -3,7 +3,7 @@ import numpy as np
 import time
 import visa
 
-from visa_server.proxy import VisaProxy
+from visa_server2.proxy import VisaProxy
 
 
 class LDC80(object):
@@ -16,16 +16,15 @@ class LDC80(object):
             setattr(self, key, value)
         print visa
         rm = visa.ResourceManager()
-        rm.open_resource(self.gpib_address)
-        self._rm = rm
+        self._inst = rm.open_resource(self.gpib_address)
 
     def _write_to_slot(self, command):
         slot_command = ':SLOT {};'.format(self.pro8_slot)
-        self._rm.write(slot_command + command)
+        self._inst.write(slot_command + command)
     
     def _query_to_slot(self, command):
         slot_command = ':SLOT {};'.format(self.pro8_slot)
-        response = self._rm.query(slot_command + command)
+        response = self._inst.query(slot_command + command)
         return response
     
     @property
@@ -71,5 +70,3 @@ class LDC80Proxy(LDC80):
         global visa
         visa = VisaProxy(visa_server)
         LDC80.__init__(self, **kwargs)
-
-        
