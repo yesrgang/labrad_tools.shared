@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import sys
+import time
 
 from PyQt4 import QtGui, QtCore, Qt
 from PyQt4.QtCore import pyqtSignal 
@@ -150,6 +151,7 @@ class CurrentControllerClient(QtGui.QGroupBox):
             current = self.current_box.value()
             self.set_current(current)
             self.hasNewCurrent = False
+            time.sleep(0.15)
             self.get_power()
 
     def set_current(self, current):
