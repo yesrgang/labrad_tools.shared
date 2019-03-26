@@ -132,7 +132,7 @@ class CurrentControllerClient(QtGui.QGroupBox):
         self.timer.start(self.update_time)
 
     def onNewState(self):
-        if self.state_button.isChecked():
+        if not self.state_button.isChecked():
             self.reactor.callInThread(self.set_state, False)
             self.display_state(False)
         else:
