@@ -10,6 +10,7 @@ class LDC80(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
         if 'visa' not in globals():
+            global visa
             import visa
         rm = visa.ResourceManager()
         self._inst = rm.open_resource(self.gpib_address)
