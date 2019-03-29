@@ -51,6 +51,7 @@ class AD9854(DefaultDevice):
         time.sleep(0.2)
         reactor.callInThread(self.delayed_call, 5, self.set_frequency, self.default_frequency)
         reactor.callInThread(self.delayed_call, 5.1, self.set_frequency, self.default_frequency)
+        reactor.callInThread(self.delayed_call, 5.2, self.set_amplitude, self.default_amplitude)
 
     def delayed_call(self, delay, func, *args):
         time.sleep(delay)
