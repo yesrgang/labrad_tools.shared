@@ -43,12 +43,12 @@ class okCFrontPanelDevicesProxy(object):
 
     def GetCount(self):
         """ Returns the number of available devices, possibly 0. """
-        return self._server.get_count(self._realm)
+        return self._server.get_count()
 
     def GetSerial(self, num=None):
         """ Returns the serial number of the given device, possibly empty if the 
         index is invalid."""
-        return self._server.get_serial(self._realm, num)
+        return self._server.get_serial(num)
 
     def Open(self, serial=None):
         """ Opens the device with the given serial number, first one by default. 
@@ -56,9 +56,8 @@ class okCFrontPanelDevicesProxy(object):
         Returns an empty pointer if there is no such device (or no devices at 
         all if the serial is empty).
         """
-        realm, serial = self._server.open(self._realm, serial)
-        return okFrontPanelProxy(self._server, realm, serial)
-
+        serial = self._server.open(serial)
+        return okFrontPanelProxy(self._server, serial)
 
 class okFrontPanelProxy(object):
     """ This class is the workhorse of the FrontPanel API. 
@@ -75,10 +74,18 @@ class okFrontPanelProxy(object):
     5. Perform any application-specific communication with the FPGA using the 
     FPGA Communication methods.    
     """
-    def __init__(self, server, realm=None, serial=None):
+    def __init__(self, server, serial=None):
         self._server = server
-        self._realm = realm
         self._serial = serial
+
+    def Close(self):
+        """ Close the device.
+    
+        This method can be used to close the device to release the corresponding 
+        device at the system level, e.g. to allow another process to use it, 
+        without destroying this object itself but keeping it to be reopened later.
+        """
+        return self._server.close(self._serial)
 
     def ConfigureFPGA(self, strFilename):
         """ Download an FPGA configuration from a file.
@@ -87,8 +94,7 @@ class okFrontPanelProxy(object):
             strFilename	(str): A string containing the filename of the 
                 configuration file.
         """
-        return self._server.configure_fpga(self._realm, self._serial, 
-                                           strFilename)
+        return self._server.configure_fpga(self._serial, strFilename)
 
     def GetWireOutValue(self, epAddr):
         """ Gets the value of a particular Wire Out from the internal wire data 
@@ -97,8 +103,7 @@ class okFrontPanelProxy(object):
         Args:
             epAddr (int): The WireOut address to query.
         """
-        return self._server.get_wire_out_value(self._realm, self._serial, 
-                                               epAddr)
+        return self._server.get_wire_out_value(self._serial, epAddr)
     
     def IsTriggered(self, epAddr, mask):
         """ Returns true if the trigger has been triggered.
@@ -111,8 +116,7 @@ class okFrontPanelProxy(object):
             epAddr (int): The TriggerOut address to query.
             mask (int): A mask to apply to the trigger value.
         """
-        return self.ok_server.is_triggered(self._realm, self._serial, epAddr, 
-                                           mask)
+        return self._server.is_triggered(self._serial, epAddr, mask)
 
     def OpenBySerial(self, serial=''):
         """ DEPRECIATED: Prefer to use OpalKelly::FrontPanelDevices::Open() 
@@ -138,8 +142,7 @@ class okFrontPanelProxy(object):
             val (int): The new value of the WireIn.
             mask (int): A mask to apply to the new value
         """
-        return self.ok_server.set_wire_in_value(self._realm, self._serial, 
-                                                epAddr, val, mask)
+        return self._server.set_wire_in_value(self._serial, epAddr, val, mask)
 
     def UpdateTriggerOuts(self):
         """ Reads Trigger Out endpoints. 
@@ -147,7 +150,7 @@ class okFrontPanelProxy(object):
         This method is called to query the XEM to determine if any TriggerOuts 
         have been activated since the last call.
         """
-        return self._server.update_trigger_outs(self._realm, self._serial)
+        return self._server.update_trigger_outs(self._serial)
 
     def UpdateWireIns(self):
         """ Transfers current Wire In values to the FPGA.
@@ -158,7 +161,7 @@ class okFrontPanelProxy(object):
         changes to the XEM simultaneously so that all wires will be updated at 
         the same time.
         """
-        return self._server.update_wire_ins(self._realm, self._serial)
+        return self._server.update_wire_ins(self._serial)
     
     def UpdateWireOuts(self):
         """ Transfers current Wire Out values from the FPGA.
@@ -166,7 +169,7 @@ class okFrontPanelProxy(object):
         This method is called to request the current state of all WireOut values
         from the XEM. All wire outs are captured and read at the same time.
         """
-        return self._server.update_wire_outs(self._realm, self._serial)
+        return self._server.update_wire_outs(self._serial)
 
     def WriteToPipeIn(self, epAddr, data):
         """ Writes a block to a Pipe In endpoint.
@@ -175,5 +178,4 @@ class okFrontPanelProxy(object):
             epAddr (int): The address of the destination Pipe In.
             data (bytearray): Data to be transferred
         """ 
-        return self._server.write_to_pipe_in(self._realm, self._serial, epAddr, 
-                                             data)
+        return self._server.write_to_pipe_in(self._serial, epAddr, data)
