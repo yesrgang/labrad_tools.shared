@@ -104,6 +104,12 @@ class okFrontPanelProxy(object):
             epAddr (int): The WireIn address to query.
         """
         return self._server.get_wire_in_value(self._serial, epAddr)
+    
+    def GetDeviceCount(self):
+        return self._server.get_device_count()
+
+    def GetDeviceListSerial(self, num):
+        return self._server.get_device_list_serial(num)
 
     def GetWireOutValue(self, epAddr):
         """ Gets the value of a particular Wire Out from the internal wire data 
