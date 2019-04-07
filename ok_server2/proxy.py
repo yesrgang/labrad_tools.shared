@@ -95,6 +95,12 @@ class okFrontPanelProxy(object):
                 configuration file.
         """
         return self._server.configure_fpga(self._serial, strFilename)
+    
+    def GetDeviceCount(self):
+        return self._server.get_device_count()
+
+    def GetDeviceListSerial(self, num):
+        return self._server.get_device_list_serial(num)
 
     def GetWireOutValue(self, epAddr):
         """ Gets the value of a particular Wire Out from the internal wire data 
