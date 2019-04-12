@@ -1,35 +1,46 @@
 import json
 import numpy as np
-import sys
 import time
 
-from PyQt4 import QtGui, QtCore, Qt
-from PyQt4.QtCore import pyqtSignal 
+from PyQt4 import QtGui, QtCore
 from twisted.internet.defer import inlineCallbacks
-from twisted.internet import defer
 
-from client_tools.connection import connection
-
-class ParameterLabel(QtGui.QLabel):
-    clicked = QtCore.pyqtSignal()
-    
-    def mousePressEvent(self, x):
-        self.clicked.emit()
-    
+from client_tools.widgets import ClickableLabel
 
 class CurrentControllerClient(QtGui.QGroupBox):
     name = None
-    mouseHover = pyqtSignal(bool)
-    state = None
-#    qt_style = 'Gtk+'
-    i = 0
     DeviceProxy = None
-    current_stepsize = 0.0001
+    currentStepsize = 0.0001
+    lockedColor = '#80ff80'
+    unlockedColor = '#ff8080'
+    updateID = np.random.randint(0, 2**31 - 1)
     
     def __init__(self, reactor):
         QtGui.QDialog.__init__(self)
         self.reactor = reactor
         reactor.callInThread(self.initialize)
+        self.connectLabrad()
+    
+    @inlineCallbacks
+    def connectLabrad(self):
+        from labrad.wrappers import connectAsync
+        self.cxn = yield connectAsync(name=self.name)
+        yield self.cxn.update.signal__signal(self.updateID)
+        yield self.cxn.update.addListener(listener=self.receiveUpdate, source=None, 
+                                          ID=self.updateID)
+        yield self.cxn.update.register(self.name)
+
+    def receiveUpdate(self, c, updateJson):
+        update = json.loads(updateJson)
+        state = update.get('state')
+        if state is not None:
+            self.displayState(state)
+        current = update.get('current')
+        if current is not None:
+            self.displayCurrent(current)
+        power = update.get('power')
+        if power is not None:
+            self.displayPower(power)
 
     def initialize(self):
         import labrad
@@ -37,163 +48,132 @@ class CurrentControllerClient(QtGui.QGroupBox):
         self.device = self.DeviceProxy(cxn)
         self.reactor.callFromThread(self.populateGUI)
         self.reactor.callFromThread(self.connectSignals)
-
-    @inlineCallbacks
-    def getDeviceInfo(self):
-        server = yield self.cxn.get_server(self.servername)
-        request = {self.name: None}
-        yield server.initialize_devices(json.dumps(request))
-        device_info_json = yield server.get_device_infos(json.dumps(request))
-        device_info = json.loads(device_info_json)
-        for key, value in device_info[self.name].items():
-            setattr(self, key, value)
-
+    
     def populateGUI(self):
-        self.state_button = QtGui.QPushButton()
-        self.state_button.setCheckable(1)
-        self.current_label = ParameterLabel('Current [A]: ')
-        self.current_box = QtGui.QDoubleSpinBox()
-        self.current_box.setKeyboardTracking(False)
-        self.current_box.setRange(*self.device.current_range)
-        self.current_box.setSingleStep(self.current_stepsize)
-        self.current_box.setDecimals(abs(int(np.floor(np.log10(self.current_stepsize)))))
-        self.current_box.setAccelerated(True)
-        self.power_label = ParameterLabel('Power [mW]: ')
-        self.power_box = QtGui.QDoubleSpinBox()
-        self.power_box.setReadOnly(True)
-        self.power_box.setButtonSymbols(QtGui.QAbstractSpinBox.NoButtons)
-        self.power_box.setDecimals(4)
+        self.nameLabel = ClickableLabel('<b>'+self.name+'</b>')
+        self.stateButton = QtGui.QPushButton()
+        self.stateButton.setCheckable(1)
+        
+        self.currentLabel = ClickableLabel('Current [A]: ')
+        self.currentBox = QtGui.QDoubleSpinBox()
+        self.currentBox.setKeyboardTracking(False)
+        self.currentBox.setRange(*self.device._current_range)
+        self.currentBox.setSingleStep(self.currentStepsize)
+        self.currentBox.setDecimals(
+                abs(int(np.floor(np.log10(self.currentStepsize)))))
+        self.currentBox.setAccelerated(True)
+
+        self.powerLabel = ClickableLabel('Power [mW]: ')
+        self.powerBox = QtGui.QDoubleSpinBox()
+        self.powerBox.setReadOnly(True)
+        self.powerBox.setButtonSymbols(QtGui.QAbstractSpinBox.NoButtons)
+        self.powerBox.setDecimals(4)
+
         self.layout = QtGui.QGridLayout()
-        self.layout.addWidget(QtGui.QLabel('<b>'+self.name+'</b>'), 1, 0, 1, 1, QtCore.Qt.AlignHCenter)
-        self.layout.addWidget(self.state_button, 1, 1)
-        self.layout.addWidget(self.current_label, 2, 0, 1, 1, QtCore.Qt.AlignRight)
-        self.layout.addWidget(self.current_box, 2, 1)
-        self.layout.addWidget(self.power_label, 3, 0, 1, 1, QtCore.Qt.AlignRight)
-        self.layout.addWidget(self.power_box, 3, 1)
+        self.layout.addWidget(self.nameLabel, 1, 0, 1, 1, 
+                              QtCore.Qt.AlignHCenter)
+        self.layout.addWidget(self.stateButton, 1, 1)
+        self.layout.addWidget(self.currentLabel, 2, 0, 1, 1, 
+                              QtCore.Qt.AlignRight)
+        self.layout.addWidget(self.currentBox, 2, 1)
+        self.layout.addWidget(self.powerLabel, 3, 0, 1, 1, 
+                              QtCore.Qt.AlignRight)
+        self.layout.addWidget(self.powerBox, 3, 1)
+
+        self.setWindowTitle(self.name)
         self.setLayout(self.layout)
         self.setFixedSize(200, 120)
     
-        self.update_displays()
-
-    def update_displays(self):
-        self.reactor.callInThread(self._update_displays) 
-
-    def _update_displays(self, c=None):
-        self.get_state()
-        self.get_current()
-        self.get_power()
+        self.reactor.callInThread(self.getAll)
     
-    def get_state(self):
-        self.reactor.callInThread(self._get_state)
-
-    def _get_state(self):
+    def getAll(self):
+        self.getState()
+        self.getCurrent()
+        self.getPower()
+    
+    def getState(self):
         state = self.device.state
-        self.reactor.callFromThread(self.display_state, state)
+        self.reactor.callFromThread(self.displayState, state)
 
-    def display_state(self, state):
+    def displayState(self, state):
         if state:
-            self.state_button.setChecked(1)
-            self.state_button.setText('On')
+            self.stateButton.setChecked(1)
+            self.stateButton.setText('On')
         else:
-            self.state_button.setChecked(0)
-            self.state_button.setText('Off')
-   
-    def get_current(self):
-        self.reactor.callInThread(self._get_current)
-
-    def _get_current(self):
+            self.stateButton.setChecked(0)
+            self.stateButton.setText('Off')
+    
+    def getCurrent(self):
         current = self.device.current
-        self.reactor.callFromThread(self.display_current, current)
+        self.reactor.callFromThread(self.displayCurrent, current)
 
-    def display_current(self, current):
-        self.current_box.setValue(current)
+    def displayCurrent(self, current):
+        self.currentBox.setValue(current)
     
-    def get_power(self):
-        self.reactor.callInThread(self._get_power)
-    
-    def _get_power(self):
+    def getPower(self):
         power = self.device.power
-        self.reactor.callFromThread(self.display_power, power)
+        self.reactor.callFromThread(self.displayPower, power)
 
-    def display_power(self, power):
-        self.power_box.setValue(power * 1e3)
-
-    def connectSignals(self):
-        self.hasNewState = False
-        self.hasNewCurrent = False
-        self.hasNewPower = False
-        
-        self.state_button.released.connect(self.onNewState)
-        self.current_box.valueChanged.connect(self.onNewCurrent)
-        
-        self.power_label.clicked.connect(self.update_displays)
-        
-        self.timer = QtCore.QTimer(self)
-        self.timer.timeout.connect(self.writeValues)
-        self.timer.start(self.update_time)
-
-    def onNewState(self):
-        if not self.state_button.isChecked():
-            self.reactor.callInThread(self.set_state, False)
-            self.display_state(False)
-        else:
-            self.reactor.callInThread(self.set_state, True)
-            self.display_state(True)
-
-    def onNewCurrent(self):
-        self.hasNewCurrent = True
-   
-    def onNewPower(self):
-        pass
-
-    def writeValues(self):
-        if self.hasNewCurrent:
-            current = self.current_box.value()
-            self.set_current(current)
-            self.hasNewCurrent = False
-            time.sleep(0.15)
-            self.get_power()
-
-    def set_current(self, current):
-        self.reactor.callInThread(self._set_current, current)
-
-    def _set_current(self, current):
-        self.device.current = current
-
-    def set_state(self, state):
-        self.reactor.callInThread(self._set_state, state)
+    def displayPower(self, power):
+        self.powerBox.setValue(power * 1e3)
+        if hasattr(self.device, '_locked_threshold'):
+            if power > self.device._locked_threshold:
+                self.powerBox.setStyleSheet('QWidget {background-color: %s}' % self.lockedColor)
+            else:
+                self.powerBox.setStyleSheet('QWidget {background-color: %s}' % self.unlockedColor)
     
-    def _set_state(self, state):
+    def connectSignals(self):
+        self.stateButton.released.connect(self.onNewState)
+        self.currentBox.valueChanged.connect(self.onNewCurrent)
+        
+        self.nameLabel.clicked.connect(self.onNameLabelClick)
+        self.currentLabel.clicked.connect(self.onCurrentLabelClick)
+        self.powerLabel.clicked.connect(self.onPowerLabelClick)
+        
+    def onNewState(self):
+        state = self.stateButton.isChecked()
+        self.reactor.callInThread(self.setState, state)
+    
+    def onNewCurrent(self):
+        current = self.currentBox.value()
+        self.reactor.callInThread(self.setCurrent, current)
+
+    def onNameLabelClick(self):
+        self.reactor.callInThread(self.getAll)
+    
+    def onCurrentLabelClick(self):
+        if QtGui.qApp.mouseButtons() & QtCore.Qt.LeftButton:
+            self.reactor.callInThread(self.getCurrent)
+        else:
+            print 'relocking'
+            self.reactor.callInThread(self.device.relock)
+
+    def onPowerLabelClick(self):
+        self.reactor.callInThread(self.getPower)
+    
+    def setState(self, state):
         self.device.state = state
-
-    def enterEvent(self, c):
-        self.mouseHover.emit(True)
-           
-    def reinitialize(self):
-        self.setDisabled(False)
-
-    def disable(self):
-        self.setDisabled(True)
+        self.reactor.callFromThread(self.displayState, state)
+        time.sleep(0.5)
+        self.getPower()
+    
+    def setCurrent(self, current):
+        self.device.current = current
+        self.reactor.callFromThread(self.displayCurrent, current)
+        time.sleep(0.2)
+        self.getPower()
 
     def closeEvent(self, x):
         self.reactor.stop()
 
 class MultipleClientContainer(QtGui.QWidget):
     name = None
-    def __init__(self, client_list, reactor, cxn=None):
+    def __init__(self, client_list, reactor):
         QtGui.QDialog.__init__(self)
         self.client_list = client_list
         self.reactor = reactor
-        self.cxn = cxn
-        self.connect()
- 
-    @inlineCallbacks
-    def connect(self):
-        if self.cxn is None:
-            self.cxn = connection()
-            yield self.cxn.connect()
         self.populateGUI()
-
+ 
     def populateGUI(self):
         self.layout = QtGui.QHBoxLayout()
         for client in self.client_list:
@@ -205,22 +185,21 @@ class MultipleClientContainer(QtGui.QWidget):
     def closeEvent(self, x):
         self.reactor.stop()
 
-#if __name__ == '__main__':
-#    from current_controller3.devices.zs import DeviceProxy as ZSProxy
-#
-#    class ZSClient(CurrentControllerClient):
-#        name = 'zs'
-#        update_time = 200
-#        DeviceProxy = ZSProxy
-#    
-#    from PyQt4 import QtGui
-#    app = QtGui.QApplication([])
-#    from client_tools import qt4reactor 
-#    qt4reactor.install()
-#    from twisted.internet import reactor
-#
-#    widget = ZSClient(reactor)
-#    widget.show()
-#    reactor.run()
-#
-#
+if __name__ == '__main__':
+    from current_controller3.devices.zs import DeviceProxy as ZSProxy
+
+    class ZSClient(CurrentControllerClient):
+        name = 'zs'
+        DeviceProxy = ZSProxy
+    
+    from PyQt4 import QtGui
+    app = QtGui.QApplication([])
+    from client_tools import qt4reactor 
+    qt4reactor.install()
+    from twisted.internet import reactor
+
+    widget = ZSClient(reactor)
+    widget.show()
+    reactor.run()
+
+
