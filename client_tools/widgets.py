@@ -1,6 +1,12 @@
 from PyQt4 import QtGui, QtCore, Qt
 import numpy as np
 
+class ClickableLabel(QtGui.QLabel):
+    clicked = QtCore.pyqtSignal()
+
+    def mousePressEvent(self, x):
+        self.clicked.emit()
+
 class SuperSpinBox(QtGui.QLineEdit):
     def __init__(self, display_range, units, num_decimals=1, significant_figures=3):# num_decimals, display_factor=1):
         super(SuperSpinBox, self).__init__()
