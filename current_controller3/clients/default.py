@@ -65,6 +65,7 @@ class CurrentControllerClient(QtGui.QGroupBox):
 
         self.powerLabel = ClickableLabel('Power [mW]: ')
         self.powerBox = QtGui.QDoubleSpinBox()
+        self.powerBox.setRange(0, 1e3)
         self.powerBox.setReadOnly(True)
         self.powerBox.setButtonSymbols(QtGui.QAbstractSpinBox.NoButtons)
         self.powerBox.setDecimals(4)
