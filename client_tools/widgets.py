@@ -223,6 +223,26 @@ class IntSpinBox(QtGui.QLineEdit):
     def value(self):
         return float(self.text().split(' ')[0])
 
+class MultipleClientContainer(QtGui.QWidget):
+    name = None
+
+    def __init__(self, client_list, reactor):
+        QtGui.QDialog.__init__(self)
+        self.client_list = client_list
+        self.reactor = reactor
+        self.populateGUI()
+ 
+    def populateGUI(self):
+        self.layout = QtGui.QHBoxLayout()
+        for client in self.client_list:
+            self.layout.addWidget(client)
+        self.setFixedSize(230 * len(self.client_list), 140)
+        self.setWindowTitle(self.name)
+        self.setLayout(self.layout)
+
+    def closeEvent(self, x):
+        self.reactor.stop()
+
 if __name__ == '__main__':
     a = QtGui.QApplication([])
     import qt4reactor 

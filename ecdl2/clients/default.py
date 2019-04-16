@@ -1,8 +1,4 @@
 from PyQt4 import QtGui, QtCore
-from PyQt4.QtCore import pyqtSignal
-
-from twisted.internet import defer, threads
-import time
 
 from client_tools.widgets import SuperSpinBox, ClickableLabel
 
@@ -51,9 +47,9 @@ class ECDLClient(QtGui.QGroupBox):
         self.layout.addWidget(self.diodeCurrentLabel, 2, 0, 1, 1, 
                               QtCore.Qt.AlignRight)
         self.layout.addWidget(self.diodeCurrentBox, 2, 1)
+        self.setLayout(self.layout)
 
         self.setWindowTitle(self.name)
-        self.setLayout(self.layout)
         self.setFixedSize(120 + self.spinboxWidth, 100)
         
         self.reactor.callInThread(self.getAll)
@@ -76,7 +72,7 @@ class ECDLClient(QtGui.QGroupBox):
             self.stateButton.setText('Off')
 
     def getPiezoVoltage(self):
-        piezoVoltage = self.device.diode_current
+        piezoVoltage = self.device.piezo_voltage
         self.reactor.callFromThread(self.displayPiezoVoltage, piezoVoltage)
 
     def displayPiezoVoltage(self, piezoVoltage):

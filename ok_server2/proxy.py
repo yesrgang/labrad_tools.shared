@@ -193,4 +193,4 @@ class okFrontPanelProxy(object):
             epAddr (int): The address of the destination Pipe In.
             data (bytearray): Data to be transferred
         """ 
-        return self._server.write_to_pipe_in(self._serial, epAddr, data)
+        return self._server.write_to_pipe_in(self._serial, epAddr, list(data))

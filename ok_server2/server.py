@@ -47,8 +47,9 @@ class OKServer(ThreadedServer):
     def configure_fpga(self, c, serial, strFilename):
         xem = self._get_xem(serial)
         xem._lock.acquire()
-        xem.ConfigureFPGA(strFilename)
+        error = xem.ConfigureFPGA(strFilename)
         xem._lock.release()
+        return error
 
     @setting(12)
     def get_count(self, c):
