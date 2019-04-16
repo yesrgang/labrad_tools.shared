@@ -18,16 +18,18 @@ class LDC50(object):
         s.send('RILD?\n')
         response = s.recv(1024)
         s.close()
-        return float(response.strip())
+        current_ma = float(response.strip())
+        return current_ma / 1e3
 
     @current.setter
-    def current(self, current):
+    def current(self, current_a):
+        current_ma = current_a * 1e3
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.settimeout(1)
         s.connect(self.socket_address)
         s.send('\n')
         s.send('ULOC 1\n')
-        s.send('SILD {}\n'.format(current))
+        s.send('SILD {}\n'.format(current_ma))
         s.close()
 
     @property
@@ -40,8 +42,8 @@ class LDC50(object):
         s.send('RWPD?\n')
         response = s.recv(1024)
         s.close()
-        return float(response.strip())
-
+        power_mw = float(response.strip())
+        return power_mw / 1e3
 
     @property
     def state(self):
