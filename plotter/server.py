@@ -34,6 +34,7 @@ from twisted.internet import reactor
 from server_tools.threaded_server import ThreadedServer
 
 WEBSOCKET_PORT = 9000
+PROJECT_DATA_PATH = os.getenv('PROJECT_DATA_PATH')
 
 class MyServerProtocol(WebSocketServerProtocol):
     connections = list()
@@ -88,17 +89,19 @@ class PlotterServer(ThreadedServer):
     def plot(self, c, settings_json='{}'):
         settings = json.loads(settings_json)
         if not self.is_plotting:
-            self._plot(settings)
+            reactor.callInThread(self._plot, settings)
         else:
             print 'still making previous plot'
 
     def _plot(self, settings):
         try:
             self.is_plotting = True
-            print 'plotting'
-            path = settings['plotter_path']                 
-            function_name = settings['plotter_function'] # name of function that will process data
+            print settings
+            path = os.path.join(PROJECT_DATA_PATH, settings['plotter_path'])
+            function_name = settings['plotter_function']
             module_name = os.path.split(path)[-1].strip('.py')
+            print path
+            print module_name
             module = imp.load_source(module_name, path)
             function = getattr(module, function_name)
             fig = function(settings)
@@ -107,20 +110,14 @@ class PlotterServer(ThreadedServer):
             sio.seek(0)
             figure_data = sio.read()
             MyServerProtocol.send_figure(figure_data)
-            print 'done plotting'
-        except Exception as e:
-            raise e
-            print 'failed plotting'
-        finally:
+            plt.close(fig)
+            del fig
+            del sio
+            del figure_data
             self.is_plotting = False
-            try:
-                plt.close(fig)
-                del fig
-                del sio
-                del figure_data
-            except:
-                pass
-
+        except Exception as e:
+            self.is_plotting = False
+            raise e
 Server = PlotterServer
 
 if __name__ == "__main__":
