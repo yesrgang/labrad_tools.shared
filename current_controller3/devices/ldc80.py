@@ -3,7 +3,7 @@ import time
 
 
 class LDC80(object):
-    _gpib_address = None
+    _visa_address = None
     _pro8_slot = None
     _current_range = (0.0, np.inf)
     _relock_stepsize = 0
@@ -16,7 +16,7 @@ class LDC80(object):
             global visa
             import visa
         rm = visa.ResourceManager()
-        self._inst = rm.open_resource(self._gpib_address)
+        self._inst = rm.open_resource(self._visa_address)
 
     def _write_to_slot(self, command):
         slot_command = ':SLOT {};'.format(self._pro8_slot)
@@ -79,7 +79,7 @@ class LDC80(object):
         self._write_to_slot(command)
 
 class LDC80Proxy(LDC80):
-    _gpib_servername = None
+    _visa_servername = None
 
     def __init__(self, cxn=None, **kwargs):
         from visa_server2.proxy import VisaProxy
@@ -87,6 +87,6 @@ class LDC80Proxy(LDC80):
             import labrad
             cxn = labrad.connect()
         global visa
-        gpib_server = cxn[self._gpib_servername]
-        visa = VisaProxy(gpib_server)
+        visa_server = cxn[self._visa_servername]
+        visa = VisaProxy(visa_server)
         LDC80.__init__(self, **kwargs)
