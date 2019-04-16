@@ -1,20 +1,20 @@
-#"""
-#### BEGIN NODE INFO
-#[info]
-#name = visa
-#version = 1.0
-#description = 
-#instancename = visa
-#
-#[startup]
-#cmdline = %PYTHON% %FILE%
-#timeout = 60
-#
-#[shutdown]
-#message = 987654321
-#timeout = 5
-#### END NODE INFO
-#"""
+"""
+### BEGIN NODE INFO
+[info]
+name = visa2
+version = 1.0
+description = 
+instancename = %LABRADNODE%_visa2
+
+[startup]
+cmdline = %PYTHON% %FILE%
+timeout = 60
+
+[shutdown]
+message = 987654321
+timeout = 5
+### END NODE INFO
+"""
 import visa
 import json
 
