@@ -25,4 +25,3 @@ class AFG3252(DefaultDevice):
         command = 'SOUR{}:FREQ?'.format(self.source)
         response = self.visa_server.query(self.visa_address, command)
         return float(response)
-

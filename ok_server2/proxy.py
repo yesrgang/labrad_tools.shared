@@ -95,6 +95,21 @@ class okFrontPanelProxy(object):
                 configuration file.
         """
         return self._server.configure_fpga(self._serial, strFilename)
+    
+    def GetWireInValue(self, epAddr):
+        """ Gets the value of a particular Wire In from the internal wire data 
+        structure.
+
+        Args:
+            epAddr (int): The WireIn address to query.
+        """
+        return self._server.get_wire_in_value(self._serial, epAddr)
+    
+    def GetDeviceCount(self):
+        return self._server.get_device_count()
+
+    def GetDeviceListSerial(self, num):
+        return self._server.get_device_list_serial(num)
 
     def GetWireOutValue(self, epAddr):
         """ Gets the value of a particular Wire Out from the internal wire data 
@@ -178,4 +193,4 @@ class okFrontPanelProxy(object):
             epAddr (int): The address of the destination Pipe In.
             data (bytearray): Data to be transferred
         """ 
-        return self._server.write_to_pipe_in(self._serial, epAddr, data)
+        return self._server.write_to_pipe_in(self._serial, epAddr, list(data))

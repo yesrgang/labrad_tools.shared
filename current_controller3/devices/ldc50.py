@@ -2,7 +2,8 @@ import socket
 
 class LDC50(object):
     socket_address = None
-    current_range = (0.0, 153.0)
+    _current_range = (0.0, 153.0)
+    _relock_stepsize = 0.001
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
@@ -44,6 +45,11 @@ class LDC50(object):
         s.close()
         power_mw = float(response.strip())
         return power_mw / 1e3
+
+    def relock(self):
+        current = self.current
+        self.current = current + self._relock_stepsize
+        self.current = current
 
     @property
     def state(self):
