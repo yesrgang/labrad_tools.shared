@@ -56,7 +56,7 @@ class LDC50(object):
         s.send('LDON?\n')
         response = s.recv(1024)
         s.close()
-        return bool(response.strip())
+        return bool(int(response.strip()))
 
     @state.setter
     def state(self, state):
