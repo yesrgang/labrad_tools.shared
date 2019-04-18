@@ -1,8 +1,7 @@
-import socket
 import time
 
 class LDC50(object):
-    socket_address = None
+    _socket_address = None
     _current_range = (0.0, 153.0)
     _relock_stepsize = 0.001
     _relock_duration = 2
@@ -10,11 +9,14 @@ class LDC50(object):
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
+        if 'socket' not in globals():
+            global socket
+            import socket
 
     def _get_socket(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(1)
-        s.connect(self.socket_address)
+        s.settimeout(2)
+        s.connect(self._socket_address)
         s.send('\n')
         s.send('ULOC 1\n')
         return s
@@ -66,3 +68,16 @@ class LDC50(object):
         else:
             s.send('LDON OFF\n')
         s.close()
+
+class LDC50Proxy(LDC50):
+    _socket_servername = None
+
+    def __init__(self, cxn=None, **kwargs):
+        from socket_server.proxy import SocketProxy
+        if cxn == None:
+            import labrad
+            cxn = labrad.connect()
+        global socket
+        socket_server = cxn[self._socket_servername]
+        socket = SocketProxy(socket_server)
+        LDC50.__init__(self, **kwargs)
