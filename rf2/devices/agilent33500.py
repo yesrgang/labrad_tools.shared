@@ -4,33 +4,29 @@ class FrequencyOutOfBoundsError(Exception):
 class AmplitudeOutOfBoundsError(Exception):
     pass
 
-class Keysight336xx(object):
-    _amplitude_range = None
-    _amplitude_units = 'dBm'
+class Agilent33500(object):
+    _amplitude_range = (-float('inf'), float('inf'))
     _frequency_range = (0, float('inf'))
     _source = None
     _vxi11_address = None
-
+    
     def __init__(self, **kwargs):
-        try:
-            vxi11 = kwargs.pop('vxi11')
-        except KeyError:
-            import vxi11
         for key, value in kwargs.items():
             setattr(self, key, value)
+        if 'vxi11' not in globals():
+            global vxi11
+            import vxi11
         self._inst = vxi11.Instrument(self._vxi11_address)
-
     @property
     def state(self):
         command = 'OUTP{}?'.format(self._source)
-        ans = self._inst.ask(command)
-        return bool(int(ans))
+        return bool(int(self._inst.ask(command)))
     
     @state.setter
     def state(self, state):
         command = 'OUTP{}:STAT {}'.format(self._source, int(bool(state)))
         self._inst.write(command)
-
+    
     @property
     def frequency(self):
         command = 'SOUR{}:FREQ?'.format(self._source)
@@ -54,10 +50,10 @@ class Keysight336xx(object):
     def amplitude(self, amplitude):
         if amplitude < min(self._amplitude_range) or amplitude > max(self._amplitude_range):
             raise AmplitudeOutOfBoundsError(amplitude)
-        command = 'SOUR{}:VOLT {} {}'.format(self._source, amplitude, self._amplitude_units)
+        command = 'SOUR{}:VOLT {}'.format(self._source, amplitude)
         self._inst.write(command)
 
-class Keysight336xxProxy(Keysight336xx):
+class Agilent33500Proxy(Agilent33500):
     _vxi11_servername = None
 
     def __init__(self, cxn=None, **kwargs):
@@ -65,5 +61,6 @@ class Keysight336xxProxy(Keysight336xx):
             import labrad
             cxn = labrad.connect()
         from vxi11_server.proxy import Vxi11Proxy
+        global vxi11
         vxi11 = Vxi11Proxy(cxn[self._vxi11_servername])
-        Keysight336xx.__init__(self, vxi11=vxi11, **kwargs)
+        Agilent33500.__init__(self, **kwargs)

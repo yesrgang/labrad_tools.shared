@@ -1,9 +1,6 @@
 import os
 import h5py
 
-from andor_server2.proxy import AndorProxy
-
-
 class IKon(object):
     _andor_serialnumber = None
 
@@ -41,8 +38,7 @@ class IKonProxy(IKon):
         if cxn == None:
             import labrad
             cxn = labrad.connect()
-        from andor_server.proxy import AndorSDKProxy
+        from andor_server2.proxy import AndorProxy
         global andor
-        andor_server = cxn[self._andor_servername]
-        andor = AndorProxy(andor_server)
+        andor = AndorProxy(cxn[self._andor_servername])
         IKon.__init__(self, **kwargs)

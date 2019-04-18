@@ -4,26 +4,26 @@ class FrequencyOutOfBoundsError(Exception):
 class AmplitudeOutOfBoundsError(Exception):
     pass
 
-class DG4xxx(object):
-    _vxi11_address = None
+class AFG3000(object):
+    _amplitude_range = None
+    _amplitude_units = None
+    _frequency_range = None
     _source = None
+    _visa_address = None
 
-    _frequency_range = (0, float('inf'))
-    _amplitude_range = (-float('inf'), float('inf'))
-    
     def __init__(self, **kwargs):
-        try:
-            vxi11 = kwargs.pop('vxi11')
-        except KeyError:
-            import vxi11
         for key, value in kwargs.items():
             setattr(self, key, value)
-        self._inst = vxi11.Instrument(self._vxi11_address)
+        if 'visa' not in globals():
+            global visa
+            import visa
+        rm = visa.ResourceManager()
+        self._inst = rm.open_resource(self._visa_address)
 
     @property
     def state(self):
-        command = 'OUTP{}?'.format(self._source)
-        ans = self._inst.ask(command)
+        command = 'OUTP{}?'.format(self.source)
+        ans = self._inst.query(command)
         if ans == 'ON':
             state = True
         else:
@@ -32,79 +32,80 @@ class DG4xxx(object):
     
     @state.setter
     def state(self, state):
-        command = 'OUTP{}:STAT {}'.format(self._source, int(bool(state)))
+        command = 'OUTP{}:STAT {}'.format(self.source, int(bool(state)))
         self._inst.write(command)
 
     @property
     def frequency(self):
-        command = 'SOUR{}:FREQ?'.format(self._source)
-        ans = self._inst.ask(command)
+        command = 'SOUR{}:FREQ?'.format(self.source)
+        ans = self._inst.query(command)
         return float(ans)
     
     @frequency.setter
     def frequency(self, frequency):
         if frequency < min(self._frequency_range) or frequency > max(self._frequency_range):
             raise FrequencyOutOfBoundsError(frequency)
-        command = 'SOUR{}:FREQ {}'.format(self._source, frequency)
+        command = 'SOUR{}:FREQ {}'.format(self.source, frequency)
         self._inst.write(command)
     
     @property
     def start_frequency(self):
-        command = 'SOUR{}:FREQ:STAR?'.format(self._source)
-        ans = self._inst.ask(command)
+        command = 'SOUR{}:FREQ:STAR?'.format(self.source)
+        ans = self._inst.query(command)
         return float(ans)
     
     @start_frequency.setter
     def start_frequency(self, frequency):
         if frequency < min(self._frequency_range) or frequency > max(self._frequency_range):
             raise FrequencyOutOfBoundsError(frequency)
-        command = 'SOUR{}:FREQ:STAR {}'.format(self._source, frequency)
+        command = 'SOUR{}:FREQ:STAR {}'.format(self.source, frequency)
         self._inst.write(command)
     
     @property
     def stop_frequency(self):
-        command = 'SOUR{}:FREQ:STOP?'.format(self._source)
-        ans = self._inst.ask(command)
+        command = 'SOUR{}:FREQ:STOP?'.format(self.source)
+        ans = self._inst.query(command)
         return float(ans)
     
     @stop_frequency.setter
     def stop_frequency(self, frequency):
         if frequency < min(self._frequency_range) or frequency > max(self._frequency_range):
             raise FrequencyOutOfBoundsError(frequency)
-        command = 'SOUR{}:FREQ:STOP {}'.format(self._source, frequency)
+        command = 'SOUR{}:FREQ:STOP {}'.format(self.source, frequency)
         self._inst.write(command)
     
     @property
     def amplitude(self):
-        command = 'SOUR{}:VOLT?'.format(self._source)
-        ans = self._inst.ask(command)
+        command = 'SOUR{}:VOLT?'.format(self.source)
+        ans = self._inst.query(command)
         return float(ans)
     
     @amplitude.setter
     def amplitude(self, amplitude):
         if amplitude < min(self._amplitude_range) or amplitude > max(self._amplitude_range):
             raise AmplitudeOutOfBoundsError(amplitude)
-        command = 'SOUR{}:VOLT {}'.format(self._source, amplitude)
+        command = 'SOUR{}:VOLT {}'.format(self.source, amplitude)
         self._inst.write(command)
         
     @property
     def offset(self):
-        command = 'SOUR{}:VOLT:OFFS?'.format(self._source)
-        ans = self._inst.ask(command)
+        command = 'SOUR{}:VOLT:OFFS?'.format(self.source)
+        ans = self._inst.query(command)
         return float(ans)
     
     @offset.setter
     def offset(self, offset):
-        command = 'SOUR{}:VOLT:OFFS {}'.format(self._source, offset)
+        command = 'SOUR{}:VOLT:OFFS {}'.format(self.source, offset)
         self._inst.write(command)
 
-class DG4xxxProxy(DG4xxx):
-    _vxi11_servername = None
+class AFG3000Proxy(AFG3000):
+    _visa_servername = None
 
     def __init__(self, cxn=None, **kwargs):
         if cxn == None:
             import labrad
             cxn = labrad.connect()
-        from vxi11_server.proxy import Vxi11Proxy
-        vxi11 = Vxi11Proxy(cxn[self._vxi11_servername])
-        DG4xxx.__init__(self, vxi11=vxi11, **kwargs)
+        from visa_server.proxy import VisaProxy
+        global visa
+        visa = VisaProxy(cxn[self._visa_servername])
+        AFG3000.__init__(self, **kwargs)

@@ -1,3 +1,9 @@
+class FrequencyOutOfBoundsError(Exception):
+    pass
+
+class AmplitudeOutOfBoundsError(Exception):
+    pass
+
 class AD9956(object):
     """ serial wrapper for controlling AD9959
     
@@ -36,12 +42,11 @@ class AD9956(object):
     _frequency_range = [0, _sysclk / 2]
     
     def __init__(self, **kwargs):
-        try:
-            serial = kwargs.pop('serial')
-        except KeyError:
-            import serial
         for key, value in kwargs.items():
             setattr(self, key, value)
+        if 'serial' not in globals():
+            global serial
+            import serial
         self._ser = serial.Serial(self._serial_port)
         self._ser.timeout = self._serial_timeout
         self._ser.baudrate = self._serial_baudrate
@@ -239,11 +244,6 @@ class AD9956Proxy(AD9956):
             import labrad
             cxn = labrad.connect()
         from serial_server.proxy import SerialProxy
+        global serial
         serial = SerialProxy(cxn[self._serial_servername])
-        AD9956.__init__(self, serial=serial, **kwargs)
-
-class FrequencyOutOfBoundsError(Exception):
-    pass
-
-class AmplitudeOutOfBoundsError(Exception):
-    pass
+        AD9956.__init__(self, **kwargs)

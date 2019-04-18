@@ -1,17 +1,14 @@
-import vxi11
-
 class Agilent335xx(object):
     _source = None
     _vxi11_address = None
     _available_waveforms = []
     
     def __init__(self, **kwargs):
-        try:
-            vxi11 = kwargs.pop('vxi11')
-        except KeyError:
-            import vxi11
         for key, value in kwargs.items():
             setattr(self, key, value)
+        if 'vxi11' not in globals():
+            global vxi11
+            import vxi11
         self._inst = vxi11.Instrument(self._vxi11_address)
 
     def _setup(self)
@@ -44,6 +41,6 @@ class Agilent335xxProxy(Agilent335xx):
             import labrad
             cxn = labrad.connect()
         from vxi11_server.proxy import Vxi11Proxy
-        vxi11_server = cxn[self._vxi11_servername]
-        vxi11 = Vxi11Proxy(vxi11_server)
-        Agilent335xx.__init__(self, vxi11=vxi11, **kwargs)
+        global vxi11
+        vxi11 = Vxi11Proxy(cxn[self._vxi11_servername])
+        Agilent335xx.__init__(self, **kwargs)

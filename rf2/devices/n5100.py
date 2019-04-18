@@ -4,32 +4,20 @@ class FrequencyOutOfBoundsError(Exception):
 class AmplitudeOutOfBoundsError(Exception):
     pass
 
-
-class E44xx(object):
-    _amplitude_range = None
+class N5100(object):
+    _amplitude_range = (-float('inf'), float('inf'))
     _amplitude_units = None
-    _frequency_range = None
-    _source = None
-    _visa_address = None
-
+    _frequency_range = (0, float('inf'))
+    _vxi11_address = None
+    
     def __init__(self, **kwargs):
-        try:
-            visa = kwargs.pop('visa')
-        except KeyError:
-            import visa
         for key, value in kwargs.items():
             setattr(self, key, value)
-        rm = visa.ResourceManager()
-        self._inst = rm.open_resource(self._visa_address)
+        if 'vxi11' not in globals():
+            global vxi11
+            import vxi11
+        self._inst = vxi11.Instrument(self._vxi11_address)
 
-    def set_state(self, state):
-        command = 'OUTP:STAT {}'.format(int(bool(state)))
-        self.rm.write(command)
-
-    def get_state(self):
-        ans = self.rm.query('OUTP:STAT?')
-        return bool(int(ans))
-    
     @property
     def state(self):
         command = 'OUTP:STAT?'
@@ -67,13 +55,14 @@ class E44xx(object):
         command = 'POW:AMPL {} {}'.format(amplitude, self._amplitude_units)
         self._inst.write(command)
 
-class E44xxProxy(E44xx):
-    _visa_servername = None
+class N5100Proxy(N5100):
+    _vxi11_servername = None
 
     def __init__(self, cxn=None, **kwargs):
         if cxn == None:
             import labrad
             cxn = labrad.connect()
-        from visa_server2.proxy import VisaProxy
-        visa = VisaProxy(cxn[self._visa_servername])
-        E44xx.__init__(self, visa=visa, **kwargs)
+        from vxi11_server.proxy import Vxi11Proxy
+        global vxi11
+        vxi11 = Vxi11Proxy(cxn[self._vxi11_servername])
+        N5100.__init__(self, **kwargs)

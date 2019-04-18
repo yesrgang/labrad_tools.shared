@@ -4,19 +4,18 @@ class FrequencyOutOfBoundsError(Exception):
 class AmplitudeOutOfBoundsError(Exception):
     pass
 
-class DG1xxx(object):
+class DG1000(object):
     _amplitude_range = (-float('inf'), float('inf'))
     _frequency_range = (0, float('inf'))
     _source = None
     _vxi11_address = None
     
     def __init__(self, **kwargs):
-        try:
-            vxi11 = kwargs.pop('vxi11')
-        except KeyError:
-            import vxi11
         for key, value in kwargs.items():
             setattr(self, key, value)
+        if 'vxi11' not in globals():
+            global vxi11
+            import vxi11
         self._inst = vxi11.Instrument(self._vxi11_address)
 
     @property
@@ -71,7 +70,7 @@ class DG1xxx(object):
         command = 'SOUR{}:VOLT:OFFS {}'.format(self._source, offset)
         self._inst.write(command)
 
-class DG1xxxProxy(DG1xxx):
+class DG1000Proxy(DG1000):
     _vxi11_servername = None
 
     def __init__(self, cxn=None, **kwargs):
@@ -79,5 +78,6 @@ class DG1xxxProxy(DG1xxx):
             import labrad
             cxn = labrad.connect()
         from vxi11_server.proxy import Vxi11Proxy
+        global vxi11
         vxi11 = Vxi11Proxy(cxn[self._vxi11_servername])
-        DG1xxx.__init__(self, vxi11=vxi11, **kwargs)
+        DG1000.__init__(self, **kwargs)
