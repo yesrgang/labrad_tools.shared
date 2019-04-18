@@ -7,7 +7,8 @@ from twisted.internet.defer import inlineCallbacks
 
 from client_tools.widgets import ClickableLabel, IntSpinBox
 
-class PicomotorClient(QtGui.QGroupBox):
+#class PicomotorClient(QtGui.QGroupBox):
+class PicomotorClient(QtGui.QWidget):
     name = None
     DeviceProxy = None
     updateID = np.random.randint(0, 2**31 - 1)
@@ -42,7 +43,7 @@ class PicomotorClient(QtGui.QGroupBox):
         
         self.setWindowTitle('{}'.format(self.name))
         self.setLayout(self.layout)
-        self.setFixedSize(80 + self.spinboxWidth, 40)
+        self.setFixedSize(60 + self.spinboxWidth, 40)
         self.setFixedSize(self.minimumSize())
 
         self.connectSignals()
