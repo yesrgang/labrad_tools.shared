@@ -18,17 +18,14 @@ MyColorMap = pg.ColorMap(*zip(*cmapToColormap(cmap)))
 
 from data_tools.process_image import process_image
 
-
-
-class ImageViewer(QtGui.QWidget):
-    servername = 'yesr10_andor'
-    update_id = 734520
-#    data_directory = '/home/yertle/yesrdata/SrQ/data/{}/'
+class CameraClient(QtGui.QWidget):
+    servername = 'camera'
+    update_id = np.random.randint(0, 2**31 - 1)
     data_directory = os.path.join(os.getenv('PROJECT_DATA_PATH'), 'data')
-    name = 'hr_ikon'
+    name = None
 
     def __init__(self, reactor):
-        super(ImageViewer, self).__init__()
+        super(CameraClient, self).__init__()
         self.reactor = reactor
         self.populate()
         self.connect()
@@ -62,10 +59,8 @@ class ImageViewer(QtGui.QWidget):
         yield server.addListener(listener=self.receive_update, source=None, 
                                  ID=self.update_id)
         self.imageView.scene.sigMouseClicked.connect(self.handle_click)
-        print 'connected!'
 
     def handle_click(self, mouseClickEvent):
-        print 'click'
         print mouseClickEvent.double()
         if mouseClickEvent.double():
             scenePos = mouseClickEvent.scenePos()
@@ -83,7 +78,6 @@ class ImageViewer(QtGui.QWidget):
             self.crosshairs['y'].setPos(pos.y())
         
     def receive_update(self, c, signal):
-        print 'got signal!', signal
         signal = json.loads(signal)
         for key, value in signal.items():
             if key == self.name:
@@ -91,13 +85,9 @@ class ImageViewer(QtGui.QWidget):
                 record_type = value['record_type']
                 image_path = self.data_directory.format(*record_path)
                 image_path = os.path.join(self.data_directory, *record_path.split('/')) + '.hdf5'
-                print record_path
-                print image_path
                 self.plot(image_path, record_type)
-        print 'done signal'
     
     def plot(self, image_path, record_type):
-        print 'image path:', image_path
         image = process_image(image_path, record_type)
         image = np.rot90(image)
         self.imageView.setImage(image, autoRange=False, autoLevels=False)
@@ -106,11 +96,3 @@ class ImageViewer(QtGui.QWidget):
         self.reactor.stop()
 
 
-if __name__ == '__main__':
-    app = QtGui.QApplication([])
-    import client_tools.qt4reactor as qt4reactor
-    qt4reactor.install()
-    from twisted.internet import reactor
-    widget = ImageViewer(reactor)
-    widget.show()
-    reactor.run()

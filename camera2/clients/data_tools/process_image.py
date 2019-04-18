@@ -8,22 +8,23 @@ def process_image(image_path, record_type):
     for key in images_h5:
         images[key] = np.array(images_h5[key], dtype='float64')
     images_h5.close()
-    #if record_type == 'record_g': 
     if record_type == 'g': 
         return process_images_g(images)
-    #elif record_type == 'record_eg':
     elif record_type == 'eg':
         return process_images_eg(images)
+    elif record_type == 'fast-g':
+        return process_images_fast_g(images)
+    elif record_type == 'fast-eg':
+        return process_images_fast_eg(images)
 
 def process_images_g(images):
     """ process images of g atoms """
     pixel_size = 0.55793991 # [um]
     cross_section = 0.1014 # [um^2]
     linewidth = 201.06192983 # [ns?]
-    pulse_length = 10 # [us]
+    pulse_length = 3 # [us]
     efficiency = 0.50348 
     gain = 0.25
-    print images.keys() 
     high_intensity_coefficient = 2 / (linewidth * pulse_length * efficiency * gain)
     low_intensity_coefficient = pixel_size**2 / cross_section
     
@@ -72,3 +73,58 @@ def process_images_eg(images):
     return np.flipud(np.fliplr(np.vstack((n_e, n_g))))
 #    return np.flipud(np.fliplr(np.vstack((image_e, image_g))))
 
+def process_images_fast_g(images):
+    """ process fast images of g atoms """
+    pixel_size = 0.55793991 # [um]
+    cross_section = 0.1014 # [um^2]
+    linewidth = 201.06192983 # [ns?]
+    pulse_length = 3 # [us]
+    efficiency = 0.50348 
+    gain = 0.25
+    
+    high_intensity_coefficient = 2 / (linewidth * pulse_length * efficiency * gain)
+    low_intensity_coefficient = pixel_size**2 / cross_section
+    
+    bright = np.array(images['bright'], dtype='f')
+    image = np.array(images['image'], dtype='f')
+    
+    n = (
+        low_intensity_coefficient * np.log(bright / image)
+        + high_intensity_coefficient * (bright - image)
+        )
+    
+    return np.flipud(np.fliplr(n))
+
+def process_images_fast_eg(images):
+    """ process fast images of e and g atoms """
+    pixel_size = 0.55793991 # [um]
+    cross_section = 0.1014 # [um^2]
+    linewidth = 201.06192983 # [ns?]
+    pulse_length = 3 # [us]
+    efficiency = 0.50348 
+    gain = 0.25
+    
+    high_intensity_coefficient = 2 / (linewidth * pulse_length * efficiency * gain)
+    low_intensity_coefficient = pixel_size**2 / cross_section
+
+    bright = np.array(images['bright'], dtype='f') #- np.array(images['dark_bright'], dtype='f')
+    image_g = np.array(images['image-g'], dtype='f') #- np.array(images['dark_g'], dtype='f')
+    image_e = np.array(images['image-e'], dtype='f') #- np.array(images['dark_e'], dtype='f')
+    
+    n_g = (
+        low_intensity_coefficient * np.log(bright / image_g)
+        + high_intensity_coefficient * (bright - image_g)
+        )
+    
+    n_e = (
+        low_intensity_coefficient * np.log(bright / image_e)
+        + high_intensity_coefficient * (bright - image_e)
+        )
+    
+    photon_counts = bright / (gain * efficiency)
+    photon_flux = photon_counts / (pixel_size**2 * pulse_length)
+    saturation_flux = linewidth / (2 * cross_section)
+    
+    n_p = photon_flux / saturation_flux / 2
+
+    return np.flipud(np.fliplr(np.vstack((n_g, n_e, n_p))))
