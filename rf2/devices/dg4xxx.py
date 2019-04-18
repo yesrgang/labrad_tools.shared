@@ -4,13 +4,13 @@ class FrequencyOutOfBoundsError(Exception):
 class AmplitudeOutOfBoundsError(Exception):
     pass
 
-class Keysight336xx(object):
-    _amplitude_range = None
-    _amplitude_units = 'dBm'
-    _frequency_range = (0, float('inf'))
-    _source = None
+class DG4xxx(object):
     _vxi11_address = None
+    _source = None
 
+    _frequency_range = (0, float('inf'))
+    _amplitude_range = (-float('inf'), float('inf'))
+    
     def __init__(self, **kwargs):
         try:
             vxi11 = kwargs.pop('vxi11')
@@ -24,7 +24,11 @@ class Keysight336xx(object):
     def state(self):
         command = 'OUTP{}?'.format(self._source)
         ans = self._inst.ask(command)
-        return bool(int(ans))
+        if ans == 'ON':
+            state = True
+        else:
+            state = False
+        return state
     
     @state.setter
     def state(self, state):
@@ -45,6 +49,32 @@ class Keysight336xx(object):
         self._inst.write(command)
     
     @property
+    def start_frequency(self):
+        command = 'SOUR{}:FREQ:STAR?'.format(self._source)
+        ans = self._inst.ask(command)
+        return float(ans)
+    
+    @start_frequency.setter
+    def start_frequency(self, frequency):
+        if frequency < min(self._frequency_range) or frequency > max(self._frequency_range):
+            raise FrequencyOutOfBoundsError(frequency)
+        command = 'SOUR{}:FREQ:STAR {}'.format(self._source, frequency)
+        self._inst.write(command)
+    
+    @property
+    def stop_frequency(self):
+        command = 'SOUR{}:FREQ:STOP?'.format(self._source)
+        ans = self._inst.ask(command)
+        return float(ans)
+    
+    @stop_frequency.setter
+    def stop_frequency(self, frequency):
+        if frequency < min(self._frequency_range) or frequency > max(self._frequency_range):
+            raise FrequencyOutOfBoundsError(frequency)
+        command = 'SOUR{}:FREQ:STOP {}'.format(self._source, frequency)
+        self._inst.write(command)
+    
+    @property
     def amplitude(self):
         command = 'SOUR{}:VOLT?'.format(self._source)
         ans = self._inst.ask(command)
@@ -54,10 +84,21 @@ class Keysight336xx(object):
     def amplitude(self, amplitude):
         if amplitude < min(self._amplitude_range) or amplitude > max(self._amplitude_range):
             raise AmplitudeOutOfBoundsError(amplitude)
-        command = 'SOUR{}:VOLT {} {}'.format(self._source, amplitude, self._amplitude_units)
+        command = 'SOUR{}:VOLT {}'.format(self._source, amplitude)
+        self._inst.write(command)
+        
+    @property
+    def offset(self):
+        command = 'SOUR{}:VOLT:OFFS?'.format(self._source)
+        ans = self._inst.ask(command)
+        return float(ans)
+    
+    @offset.setter
+    def offset(self, offset):
+        command = 'SOUR{}:VOLT:OFFS {}'.format(self._source, offset)
         self._inst.write(command)
 
-class Keysight336xxProxy(Keysight336xx):
+class DG4xxxProxy(DG4xxx):
     _vxi11_servername = None
 
     def __init__(self, cxn=None, **kwargs):
@@ -66,4 +107,4 @@ class Keysight336xxProxy(Keysight336xx):
             cxn = labrad.connect()
         from vxi11_server.proxy import Vxi11Proxy
         vxi11 = Vxi11Proxy(cxn[self._vxi11_servername])
-        Keysight336xx.__init__(self, vxi11=vxi11, **kwargs)
+        DG4xxx.__init__(self, vxi11=vxi11, **kwargs)

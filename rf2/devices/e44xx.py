@@ -1,17 +1,24 @@
-class E44xx(object):
-    _visa_address = None
-    
-    amplitude_range = None
-    amplitude_units = None
+class FrequencyOutOfBoundsError(Exception):
+    pass
 
-    frequency_range = None
-    
+class AmplitudeOutOfBoundsError(Exception):
+    pass
+
+
+class E44xx(object):
+    _amplitude_range = None
+    _amplitude_units = None
+    _frequency_range = None
+    _source = None
+    _visa_address = None
+
     def __init__(self, **kwargs):
+        try:
+            visa = kwargs.pop('visa')
+        except KeyError:
+            import visa
         for key, value in kwargs.items():
             setattr(self, key, value)
-        if 'visa' not in globals():
-            global visa
-            import visa
         rm = visa.ResourceManager()
         self._inst = rm.open_resource(self._visa_address)
 
@@ -42,8 +49,8 @@ class E44xx(object):
     
     @frequency.setter
     def frequency(self, frequency):
-        frequency = sorted([min(self._frequency_range), 
-            max(self._frequency_range), frequency])[1]
+        if frequency < min(self._frequency_range) or frequency > max(self._frequency_range):
+            raise FrequencyOutOfBoundsError(frequency)
         command = 'FREQ:CW {} Hz'.format(frequency)
         self._inst.write(command)
 
@@ -55,11 +62,11 @@ class E44xx(object):
     
     @amplitude.setter
     def amplitude(self, amplitude):
-        amplitude = sorted([min(self._amplitude_range), 
-            max(self._amplitude_range), amplitude])[1]
+        if amplitude < min(self._amplitude_range) or amplitude > max(self._amplitude_range):
+            raise AmplitudeOutOfBoundsError(amplitude)
         command = 'POW:AMPL {} {}'.format(amplitude, self._amplitude_units)
         self._inst.write(command)
-        
+
 class E44xxProxy(E44xx):
     _visa_servername = None
 
@@ -67,8 +74,6 @@ class E44xxProxy(E44xx):
         if cxn == None:
             import labrad
             cxn = labrad.connect()
-        global visa
         from visa_server2.proxy import VisaProxy
-        visa_server = cxn[self._visa_servername]
-        visa = VisaProxy(visa_server)
-        E44xx.__init__(self, **kwargs)
+        visa = VisaProxy(cxn[self._visa_servername])
+        E44xx.__init__(self, visa=visa, **kwargs)

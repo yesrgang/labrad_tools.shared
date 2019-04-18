@@ -1,54 +1,53 @@
 class AD9956(object):
     """ serial wrapper for controlling AD9959
-
-    this class is meant to be inherited:
-
-    class MyDDS(AD9959):
-        serial_port = '/dev/ACM0'
-        arduino_address = 0
-        channel_num = 0
-
-    >> my_dds = MyDDS()
-
-    frequencies can then be programmed via
-    >> my_dds.frequency = 100e6
-    or read via
-    >> my_dds.frequency
-    """
-    serial_port = None
-    serial_timeout = 0.05
-    serial_baudrate = 9600
     
-    arduino_address = None
-    channel_num = None
+    example usage:
+        class MyDDS(AD9959):
+            _serial_port = '/dev/ACM0'
+            _arduino_address = 0
+            _channel_num = 0
 
-    sysclk = 400e6
-    syncclk = sysclk/4.0
+        my_dds = MyDDS()
 
-    cfr1_reg = int(0x00)
-    cfr2_reg = int(0x01)
-    rdftw_reg = int(0x02)
-    fdftw_reg = int(0x03)
-    rsrr_reg = int(0x04)
-    fsrr_reg = int(0x05)
-    flow_reg = int(0x06)
-    fhigh_reg = int(0x07)
+        # frequencies can then be programmed via
+        my_dds.frequency = 100e6
+        # or read via
+        my_dds.frequency
+    """
+    _serial_port = None
+    _serial_timeout = 0.05
+    _serial_baudrate = 9600
+    
+    _arduino_address = None
+    _channel_num = None
+
+    _sysclk = 400e6
+    _syncclk = _sysclk/4.0
+
+    _cfr1_reg = int(0x00)
+    _cfr2_reg = int(0x01)
+    _rdftw_reg = int(0x02)
+    _fdftw_reg = int(0x03)
+    _rsrr_reg = int(0x04)
+    _fsrr_reg = int(0x05)
+    _flow_reg = int(0x06)
+    _fhigh_reg = int(0x07)
        
-    frequency_range = [0, sysclk / 2]
+    _frequency_range = [0, _sysclk / 2]
     
     def __init__(self, **kwargs):
-        self.mode = 'single'
+        try:
+            serial = kwargs.pop('serial')
+        except KeyError:
+            import serial
         for key, value in kwargs.items():
             setattr(self, key, value)
-        if 'serial' not in globals():
-            import serial
-        ser = serial.Serial(self.serial_port)
-        ser.timeout = self.serial_timeout
-        ser.baudrate = self.serial_baudrate
-        self._ser = ser
+        self._ser = serial.Serial(self._serial_port)
+        self._ser.timeout = self._serial_timeout
+        self._ser.baudrate = self._serial_baudrate
     
     def _make_instruction_set(self, register, data):
-        ins = [58, self.arduino_address, len(data)+1, register] + data
+        ins = [58, self._arduino_address, len(data)+1, register] + data
         ins_sum = sum(ins[1:])
         ins_sum_bin = bin(ins_sum)[2:].zfill(8)
         lowest_byte = ins_sum_bin[-8:]
@@ -94,7 +93,7 @@ class AD9956(object):
             list of 8 bytes, specifying frequency in units of SYSCLK. By default 
             the phase is set to zero by setting the first two bytes to zero.
         """
-        ftw = hex(int(frequency * 2.**48 / self.sysclk))[2:].zfill(16)
+        ftw = hex(int(frequency * 2.**48 / self._sysclk))[2:].zfill(16)
         return [int('0x' + ftw[i:i+2], 0) for i in range(0, 16, 2)]
 
     
@@ -178,13 +177,13 @@ class AD9956(object):
             rdw = self._make_rdftw(rate)
             fdw = self._make_fdftw(rate)
             instruction_set = (
-                self._make_instruction_set(self.cfr1_reg, cfr1w)
-                + self._make_instruction_set(self.rdftw_reg, rdw)
-                + self._make_instruction_set(self.fdftw_reg, fdw)
-                + self._make_instruction_set(self.rsrr_reg, rsrr)
-                + self._make_instruction_set(self.fsrr_reg, fsrr)
-                + self._make_instruction_set(self.flow_reg, ftw_start) 
-                + self._make_instruction_set(self.fhigh_reg, ftw_stop) 
+                self._make_instruction_set(self._cfr1_reg, cfr1w)
+                + self._make_instruction_set(self._rdftw_reg, rdw)
+                + self._make_instruction_set(self._fdftw_reg, fdw)
+                + self._make_instruction_set(self._rsrr_reg, rsrr)
+                + self._make_instruction_set(self._fsrr_reg, fsrr)
+                + self._make_instruction_set(self._flow_reg, ftw_start) 
+                + self._make_instruction_set(self._fhigh_reg, ftw_stop) 
                 )
             command = ''.join(instruction_set)
             self._ser.write(command)
@@ -200,23 +199,19 @@ class AD9956(object):
         Returns:
             None
         """
-        min_freq = min(self.frequency_range)
-        max_freq = max(self.frequency_range)
-        if not frequency == sorted([frequency, min_freq, max_freq])[1]:
-            message = ('frequency: {} Hz is outside of range [{} Hz, {} Hz].'
-                    ''.format(frequency, min_freq, max_freq))
-            raise Exception(message)
+        if frequency < min(self._frequency_range) or frequency > max(self._frequency_range):
+            raise FrequencyOutOfBoundsError(frequency)
         cfr1w = self._make_cfr1w('single') 
         ftw = self._make_ftw(frequency) 
         if output == 'high':
             instruction_set = (
-                self._make_instruction_set(self.arduino_address, self.cfr1_reg, cfr1w)
-                + self._make_instruction_set(self.arduino_address, self.fhigh_reg, ftw)
+                self._make_instruction_set(self._arduino_address, self._cfr1_reg, cfr1w)
+                + self._make_instruction_set(self._arduino_address, self._fhigh_reg, ftw)
                 )
         else:
             instruction_set = (
-                self._make_instruction_set(self.arduino_address, self.cfr1_reg, cfr1w)
-                + self._make_instruction_set(self.arduino_address, self.flow_reg, ftw)
+                self._make_instruction_set(self._arduino_address, self._cfr1_reg, cfr1w)
+                + self._make_instruction_set(self._arduino_address, self._flow_reg, ftw)
                 )        
         command = ''.join(instruction_set)
         self._ser.write(command)
@@ -235,3 +230,20 @@ class AD9956(object):
     def ramp_frequencies(self):
         """ (float, float): programmed freqeuncies in 'ramp' frequency mode """
         return self._low_frequency, self._high_frequency
+
+class AD9956Proxy(AD9956):
+    _serial_servername = None
+
+    def __init__(self, cxn=None, **kwargs):
+        if cxn == None:
+            import labrad
+            cxn = labrad.connect()
+        from serial_server.proxy import SerialProxy
+        serial = SerialProxy(cxn[self._serial_servername])
+        AD9956.__init__(self, serial=serial, **kwargs)
+
+class FrequencyOutOfBoundsError(Exception):
+    pass
+
+class AmplitudeOutOfBoundsError(Exception):
+    pass

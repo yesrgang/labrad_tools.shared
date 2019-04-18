@@ -1,8 +1,23 @@
-class SG382(object):
-    vxi11_address = None
-    source = None
+class FrequencyOutOfBoundsError(Exception):
+    pass
 
-    frequency_range = (1e6, 2e9)
+class AmplitudeOutOfBoundsError(Exception):
+    pass
+
+class SG382(object):
+    _frequency_range = (1e6, 2e9)
+    _vxi11_address = None
+
+    
+    def __init__(self, **kwargs):
+        try:
+            vxi11 = kwargs.pop('vxi11')
+        except KeyError:
+            import vxi11
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        self._inst = vxi11.Instrument(self._vxi11_address)
+
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
@@ -20,9 +35,19 @@ class SG382(object):
     
     @frequency.setter
     def frequency(self, frequency):
-        frequency = sorted([min(self.frequency_range), 
-            max(self.frequency_range), frequency])[1]
+        if frequency < min(self._frequency_range) or frequency > max(self._frequency_range):
+            raise FrequencyOutOfBoundsError(frequency)
         print frequency
         command = 'FREQ {}'.format(frequency)
         self._inst.write(command)
     
+class SG382Proxy(SG382):
+    _vxi11_servername = None
+
+    def __init__(self, cxn=None, **kwargs):
+        if cxn == None:
+            import labrad
+            cxn = labrad.connect()
+        from vxi11_server.proxy import Vxi11Proxy
+        vxi11 = Vxi11Proxy(cxn[self._vxi11_servername])
+        SG382.__init__(self, vxi11=vxi11, **kwargs)
