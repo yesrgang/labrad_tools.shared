@@ -4,15 +4,15 @@
 name = socket
 version = 1
 description = none
-sancename = %LABRADNODE%_socket
+instancename = %LABRADNODE%_socket
 
 [startup]
 cmdline = %PYTHON% %FILE%
-timeout = 20
+timeout = 5
 
 [shutdown]
 message = 987654321
-timeout = 20
+timeout = 5
 ### END NODE INFO
 """
 import json
@@ -47,7 +47,9 @@ class SocketServer(ThreadedServer):
     @setting(12, _id='i')
     def close(self, c, _id):
         s = self._get_socket(_id)
-        return s.close()
+        result = s.close()
+        del self._sockets[_id]
+        return result
 
     @setting(13, _id='i')
     def gettimeout(self, c, _id):
