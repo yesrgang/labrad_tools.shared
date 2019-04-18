@@ -236,7 +236,7 @@ class MultipleClientContainer(QtGui.QWidget):
         self.layout = QtGui.QHBoxLayout()
         for client in self.client_list:
             self.layout.addWidget(client)
-        self.setFixedSize(230 * len(self.client_list), 140)
+        self.setFixedSize(230 * len(self.client_list), 120)
         self.setWindowTitle(self.name)
         self.setLayout(self.layout)
 
