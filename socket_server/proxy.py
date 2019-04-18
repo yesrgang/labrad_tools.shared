@@ -4,6 +4,9 @@ import socket
 
 
 class SocketProxy(object):
+    AF_INET = socket.AF_INET
+    SOCK_STREAM = socket.SOCK_STREAM
+
     def __init__(self, server):
         self._server = server
 
