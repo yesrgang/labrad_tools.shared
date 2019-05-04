@@ -1,47 +1,51 @@
 import struct
 
-from serial_server.proxy import SerialProxy
+class FrequencyOutOfBoundsError(Exception):
+    pass
+
+class AmplitudeOutOfBoundsError(Exception):
+    pass
 
 class AD9959(object):
     """ serial wrapper for controlling AD9956
 
-    this class is meant to be inherited:
+    this class is meant to be inherited.
+    
+    example usage:
+        class MyDDS(AD9956):
+            _serial_port = '/dev/ttyACM0'
+            _arduino_address = 0
+            _channel_num = 0
 
-    class MyDDS(AD9956):
-        serial_port = '/dev/ttyACM0'
-        arduino_address = 0
-        channel_num = 0
+        my_dds = MyDDS()
 
-    >> my_dds = MyDDS()
-
-    frequencies can then be programmed via
-    >> my_dds.frequency = 100e6
-    or read via
-    >> my_dds.frequency
+        # frequencies can then be programmed via
+        my_dds.frequency = 100e6
+        # or read via
+        my_dds.frequency
     """
-    serial_port = None
-    serial_timeout = 0.05
-    serial_baudrate = 9600
+    _serial_port = None
+    _serial_timeout = 0.05
+    _serial_baudrate = 9600
     
-    arduino_address = None
-    channel_number = None
+    _arduino_address = None
+    _channel_num = None
 
-    sysclk = 500e6
+    _sysclk = 500e6
 
-    csr = int(0x00)
-    cfr = int(0x03)
-    cftr0 = int(0x04)
-    acr = int(0x06)
-    lsrrr = int(0x07)
-    rdr = int(0x08)
-    fdr = int(0x09)
-    cr1 = int(0x0A)
+    _csr = int(0x00)
+    _cfr = int(0x03)
+    _cftr0 = int(0x04)
+    _acr = int(0x06)
+    _lsrrr = int(0x07)
+    _rdr = int(0x08)
+    _fdr = int(0x09)
+    _cr1 = int(0x0A)
     
-    amplitude_range = [0, 1]
-    frequency_range = [0, sysclk / 2]
+    _amplitude_range = (0, 1)
+    _frequency_range = (0, _sysclk / 2)
     
     def __init__(self, **kwargs):
-        self.mode = 'single'
         self._rate = 1
         self._sweep = None
         self._frequency = None
@@ -53,14 +57,13 @@ class AD9959(object):
         if 'serial' not in globals():
             global serial
             import serial
-        ser = serial.Serial(self.serial_port)
-        ser.timeout = self.serial_timeout
-        ser.baudrate = self.serial_baudrate
-        self._ser = ser
+        self._ser = serial.Serial(self._serial_port)
+        self._ser.timeout = self._serial_timeout
+        self._ser.baudrate = self._serial_baudrate
     
     def _make_instruction_set(self, register, data):
         if data is not None:
-            ins = [58, self.arduino_address, len(data)+1, register] + data
+            ins = [58, self._arduino_address, len(data)+1, register] + data
             ins_sum = sum(ins[1:])
             ins_sum_bin = bin(ins_sum)[2:].zfill(8)
             lowest_byte = ins_sum_bin[-8:]
@@ -72,9 +75,9 @@ class AD9959(object):
 
     def _make_csw(self):
         """ return channel select word """
-        if self.channel_number > 3:
+        if self._channel_num > 3:
             raise TypeError
-        return [(2**int(self.channel_number) << 4) + 2]
+        return [(2**int(self._channel_num) << 4) + 2]
 
     def _make_cfw(self, sweep):
         """ return channel function  word """
@@ -104,7 +107,7 @@ class AD9959(object):
     def _make_cftw(self, frequency):
         """ return frequency tuning word """
         if frequency is not None:
-            cftw = hex(int(frequency * 2.**32 / self.sysclk))[2:].zfill(8) # 32-bit dac
+            cftw = hex(int(frequency * 2.**32 / self._sysclk))[2:].zfill(8) # 32-bit dac
             return [int('0x' + cftw[i:i+2], 0) for i in range(0, 8, 2)]
 
     def _make_acw(self, amplitude, ramp=False):
@@ -150,14 +153,14 @@ class AD9959(object):
         cw1 = self._make_cftw(self._stop_frequency)
         
         instruction_set = []
-        instruction_set += self._make_instruction_set(self.csr, csw)
-        instruction_set += self._make_instruction_set(self.cfr, cfw)
-        instruction_set += self._make_instruction_set(self.cftr0, cftw0)
-        instruction_set += self._make_instruction_set(self.acr, acw)
-        instruction_set += self._make_instruction_set(self.lsrrr, lsrrw)
-        instruction_set += self._make_instruction_set(self.rdr, rdw)
-        instruction_set += self._make_instruction_set(self.fdr, fdw)
-        instruction_set += self._make_instruction_set(self.cr1, cw1)
+        instruction_set += self._make_instruction_set(self._csr, csw)
+        instruction_set += self._make_instruction_set(self._cfr, cfw)
+        instruction_set += self._make_instruction_set(self._cftr0, cftw0)
+        instruction_set += self._make_instruction_set(self._acr, acw)
+        instruction_set += self._make_instruction_set(self._lsrrr, lsrrw)
+        instruction_set += self._make_instruction_set(self._rdr, rdw)
+        instruction_set += self._make_instruction_set(self._fdr, fdw)
+        instruction_set += self._make_instruction_set(self._cr1, cw1)
         
         command = ''.join(instruction_set)
         self._ser.write(command)
@@ -168,6 +171,8 @@ class AD9959(object):
 
     @amplitude.setter
     def amplitude(self, amplitude):
+        if amplitude < min(self._amplitude_range) or amplitude > max(self._amplitude_range):
+            raise AmplitudeOutOfBoundsError(amplitude)
         self._amplitude = amplitude
         self._write_to_registers()
     
@@ -177,6 +182,8 @@ class AD9959(object):
 
     @frequency.setter
     def frequency(self, frequency):
+        if frequency < min(self._frequency_range) or frequency > max(self._frequency_range):
+            raise FrequencyOutOfBoundsError(frequency)
         self._frequency = frequency
         self._write_to_registers()
     
@@ -196,13 +203,13 @@ class AD9959(object):
         self._write_to_registers()
 
 class AD9959Proxy(AD9959):
-    serial_servername = None
+    _serial_servername = None
 
     def __init__(self, cxn=None, **kwargs):
         if cxn == None:
             import labrad
             cxn = labrad.connect()
+        from serial_server.proxy import SerialProxy
         global serial
-        serial_server = cxn[self.serial_servername]
-        serial = SerialProxy(serial_server)
+        serial = SerialProxy(cxn[self._serial_servername])
         AD9959.__init__(self, **kwargs)

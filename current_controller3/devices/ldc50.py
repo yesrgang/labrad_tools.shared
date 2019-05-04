@@ -58,7 +58,7 @@ class LDC50(object):
         s.send('LDON?\n')
         response = s.recv(1024)
         s.close()
-        return bool(response.strip())
+        return bool(int(response.strip()))
 
     @state.setter
     def state(self, state):
@@ -78,6 +78,5 @@ class LDC50Proxy(LDC50):
             import labrad
             cxn = labrad.connect()
         global socket
-        socket_server = cxn[self._socket_servername]
-        socket = SocketProxy(socket_server)
+        socket = SocketProxy(cxn[self._socket_servername])
         LDC50.__init__(self, **kwargs)
