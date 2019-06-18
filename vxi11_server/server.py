@@ -61,12 +61,11 @@ class VXI11Server(ThreadedServer):
         inst = self._get_inst(**host_kwargs)
         inst.timeout = timeout
     
-    @setting(14, host_kwargs_json='s', message='s', encoding='s', returns='s')
+    @setting(14, host_kwargs_json='s', message='s', encoding='s')
     def write(self, c, host_kwargs_json, message, encoding='utf-8'):
         host_kwargs = json.loads(host_kwargs_json)
         inst = self._get_inst(**host_kwargs)
-        response = inst.write(message, encoding)
-        return response
+        return inst.write(message, encoding)
 
 if __name__ == '__main__':
     from labrad import util
