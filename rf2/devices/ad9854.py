@@ -1,8 +1,15 @@
 class FrequencyOutOfBoundsError(Exception):
-    pass
+    def __init__(self, frequency, frequency_range):
+        message = 'frequency {} is out of bounds {}.'.format(frequency, 
+                                                                frequency_range)
+        super(FrequencyOutOfBoundsError, self).__init__(message)
 
 class AmplitudeOutOfBoundsError(Exception):
-    pass
+    def __init__(self, amplitude, amplitude_range):
+        message = 'amplitude {} is out of bounds {}.'.format(amplitude, 
+                                                                amplitude_range)
+        super(AmplitudeOutOfBoundsError, self).__init__(message)
+
 
 class AD9854(object):
     _serial_port = None
@@ -52,7 +59,7 @@ class AD9854(object):
     @frequency.setter
     def frequency(self, frequency):
         if frequency < min(self._frequency_range) or frequency > max(self._frequency_range):
-            raise FrequencyOutOfBoundsError(frequency)
+            raise FrequencyOutOfBoundsError(frequency, self._frequency_range)
         ftw = self._make_ftw(frequency)
         instruction_set = self._make_instruction_set(self._freg, ftw)
         command = ''.join(instruction_set)
@@ -70,7 +77,7 @@ class AD9854(object):
     @amplitude.setter
     def amplitude(self, amplitude):
         if amplitude < min(self._amplitude_range) or amplitude > max(self._amplitude_range):
-            raise AmplitudeOutOfBoundsError(amplitude)
+            raise AmplitudeOutOfBoundsError(amplitude, self._amplitude_range)
         atw = self._make_atw(amplitude)
         instruction_set = self._make_instruction_set(self._areg, atw)
         command = ''.join(instruction_set)
