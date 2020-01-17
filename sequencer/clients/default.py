@@ -289,30 +289,31 @@ class SequencerClient(QtGui.QWidget):
         with open(filepath, 'r') as infile:
             sequence = json.load(infile)
         master_sequence = sequence[self.master_channel]
-        for channel_key, channel_info in self.channels.items():
-            channel_sequence = None
-            matched_key = self.match_sequence_key(sequence, channel_key)
-            if matched_key:
-                channel_sequence = sequence.pop(matched_key)
-            if not channel_sequence:
-                if channel_key in self.analog_channels:
-                    default_sequence_segment = [
-                        {
-                            'dt': s['dt'], 
-                            'vf': channel_info['manual_output'],
-                            'type': 'lin',
-                            }
-                        for s in master_sequence
-                        ]
-                elif channel_key in self.digital_channels:
-                    default_sequence_segment = [
-                        {
-                            'dt': s['dt'], 
-                            'out': channel_info['manual_output'],
-                            }
-                        for s in master_sequence
-                        ]
-            sequence.update({channel_key: channel_sequence})
+        for board_key, board_info in self.channels.items():
+            for channel_key, channel_info in board_info.items():
+                channel_sequence = None
+                matched_key = self.match_sequence_key(sequence, channel_key)
+                if matched_key:
+                    channel_sequence = sequence.pop(matched_key)
+                if not channel_sequence:
+                    if channel_key in self.analog_channels:
+                        default_sequence_segment = [
+                            {
+                                'dt': s['dt'], 
+                                'vf': channel_info['manual_output'],
+                                'type': 'lin',
+                                }
+                            for s in master_sequence
+                            ]
+                    elif channel_key in self.digital_channels:
+                        default_sequence_segment = [
+                            {
+                                'dt': s['dt'], 
+                                'out': channel_info['manual_output'],
+                                }
+                            for s in master_sequence
+                            ]
+                sequence.update({channel_key: channel_sequence})
 
         self.displaySequence(sequence)
         self.loadAndSave.locationBox.setText(filepath)
