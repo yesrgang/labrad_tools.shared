@@ -21,7 +21,7 @@ class N5100(object):
     @property
     def state(self):
         command = 'OUTP:STAT?'
-        ans = self._inst.query(command)
+        ans = self._inst.ask(command)
         return bool(int(ans))
     
     @state.setter
@@ -32,7 +32,7 @@ class N5100(object):
     @property
     def frequency(self):
         command = 'FREQ:CW?'
-        ans = self._inst.query(command)
+        ans = self._inst.ask(command)
         return float(ans)
     
     @frequency.setter
@@ -45,7 +45,7 @@ class N5100(object):
     @property
     def amplitude(self):
         command = 'POW:AMPL?'
-        ans = self._inst.query(command)
+        ans = self._inst.ask(command)
         return float(ans)
     
     @amplitude.setter
