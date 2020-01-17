@@ -137,7 +137,7 @@ class YeSrSequencerBoard(DefaultDevice):
         """ to be implemented by child class """
 
 
-    def fix_sequence_keys(self, subsequence_names, tmpdir):
+    def fix_sequence_keys(self, subsequence_names, tmpdir=False):
         for subsequence_name in set(subsequence_names):
             subsequence = self.load_sequence(subsequence_name)
             master_subsequence = subsequence[self.master_channel]
@@ -157,6 +157,7 @@ class YeSrSequencerBoard(DefaultDevice):
     
     
     def set_sequence(self, subsequence_names):
+        self.fix_sequence_keys(subsequence_names, False)
         self.subsequence_names = subsequence_names
         
         subsequence_list = []
