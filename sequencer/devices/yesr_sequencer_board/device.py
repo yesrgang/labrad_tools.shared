@@ -6,7 +6,7 @@ import time
 
 from device_server.device import DefaultDevice
 from sequencer.devices.yesr_sequencer_board.helpers import time_to_ticks
-from sequencer.devices.yesr_sequencer_board.helpers import combine_sequences
+#from sequencer.devices.yesr_sequencer_board.helpers import combine_sequences
 from ok_server.proxy import OKProxy
 
 
@@ -137,27 +137,59 @@ class YeSrSequencerBoard(DefaultDevice):
         """ to be implemented by child class """
 
 
-    def fix_sequence_keys(self, subsequence_names, tmpdir=False):
+    def fix_sequence_keys(self, subsequence_names):
         for subsequence_name in set(subsequence_names):
             subsequence = self.load_sequence(subsequence_name)
-            master_subsequence = subsequence[self.master_channel]
+            master_channel_subsequence = subsequence[self.master_channel]
+            
             for channel in self.channels:
-                channel_subsequence = None
+                channel_subsequence = []
                 matched_key = self.match_sequence_key(subsequence, channel.key)
                 if matched_key:
                     channel_subsequence = subsequence.pop(matched_key)
                 if not channel_subsequence:
                     channel_subsequence = [
                         self.default_sequence_segment(channel, s['dt'])
-                            for s in master_subsequence
+                            for s in master_channel_subsequence
                         ]
                 subsequence.update({channel.key: channel_subsequence})
 
-            self.save_sequence(subsequence, subsequence_name, tmpdir)
+            self.save_sequence(subsequence, subsequence_name, False)
     
+#    def fix_subsequence_keys(self, subsequence_name):
+#        subsequence = self.load_sequence(subsequence_name)
+#        master_subsequence = subsequence[self.master_channel]
+#        for channel in self.channels:
+#            channel_subsequence = None
+#            matched_key = self.match_sequence_key(subsequence, channel.key)
+#            if matched_key:
+#                channel_subsequence = subsequence.pop(matched_key)
+#            if not channel_subsequence:
+#                channel_subsequence = [
+#                    self.default_sequence_segment(channel, s['dt'])
+#                        for s in master_subsequence
+#                    ]
+#            subsequence.update({channel.key: channel_subsequence})
+#
+#        self.save_sequence(subsequence, subsequence_name)
+
+    def combine_subsequences(self, subsequence_list):
+        combined_sequence = {}
+        for channel in self.channels:
+            channel_sequence = []
+            for subsequence in subsequence_list:
+                channel_sequence += subsequence[channel.key]
+            combined_sequence[channel.key] = channel_sequence
+        return combined_sequence
     
     def set_sequence(self, subsequence_names):
-        self.fix_sequence_keys(subsequence_names, False)
+        try:
+            self._set_sequence(subsequence_names)
+        except:
+            self.fix_sequence_keys(subsequence_names)
+            self._set_sequence(subsequence_names)
+
+    def _set_sequence(self, subsequence_names):
         self.subsequence_names = subsequence_names
         
         subsequence_list = []
@@ -165,7 +197,7 @@ class YeSrSequencerBoard(DefaultDevice):
             subsequence = self.load_sequence(subsequence_name)
             subsequence_list.append(subsequence)
 
-        raw_sequence = combine_sequences(subsequence_list)
+        raw_sequence = self.combine_subsequences(subsequence_list)
         self.set_raw_sequence(raw_sequence)
 
     def get_sequence(self):
