@@ -10,7 +10,7 @@ class YeSrAnalogChannel(object):
     programmable_sequence = None
 
     def __init__(self, loc=None, name=None, mode='auto', manual_output=0.0, 
-            voltage_range=(-10.0, 10.0)):
+            voltage_range=(-10.0, 10.0), alt_keys=[]):
         self.loc = int(loc)
         self.name = str(name)
         self.mode = str(mode)
@@ -18,6 +18,7 @@ class YeSrAnalogChannel(object):
         self.software_voltage_range = voltage_range
         self.min_voltage = min(voltage_range)
         self.max_voltage = max(voltage_range)
+        self.alt_keys = alt_keys
 
     def set_board(self, board):
         self.board = board
