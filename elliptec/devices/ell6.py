@@ -2,7 +2,7 @@ import struct
 
 from serial_server.proxy import SerialProxy
 
-class ELLO(object):
+class ELL6(object):
     serial_port = None
     address = 0
 
@@ -21,32 +21,27 @@ class ELLO(object):
     
     @property
     def position(self):
-        return self._get_position()
-
-    @position.setter
-    def position(self, position):
-        self._move_absolute(position)
-    
-    def _move_absolute(self, position_mm):
-        position_hex = struct.pack('>I', position_mm * 2048)
-        position_str = position_hex.encode('hex').upper()
-        self._ser.write('{}ma{}'.format(self.address, position_str))
-        result = self._ser.readline()
-        position_str = result.strip().split('PO')[1]
-        position_hex = position_str.decode('hex')
-        position = struct.unpack('>I', position_hex)[0]
-        return float(position) / 2048
-
-    def _get_position(self):
         self._ser.write('{}gp'.format(self.address))
         result = self._ser.readline()
         position_str = result.strip().split('PO')[1]
         position_hex = position_str.decode('hex')
         position = struct.unpack('>I', position_hex)[0]
-        return float(position) / 2048
+        return int(bool(position))
+
+    @position.setter
+    def position(self, position):
+        if position:
+            self._ser.write('{}fw'.format(self.address))
+        else:
+            self._ser.write('{}bw'.format(self.address))
+        result = self._ser.readline()
+        position_str = result.strip().split('PO')[1]
+        position_hex = position_str.decode('hex')
+        position = struct.unpack('>I', position_hex)[0]
+        return int(bool(position))
 
 
-class ELLOProxy(ELLO):
+class ELL6Proxy(ELL6):
     serial_servername = None
 
     def __init__(self, cxn=None, **kwargs):
@@ -56,4 +51,4 @@ class ELLOProxy(ELLO):
         global serial
         serial_server = cxn[self.serial_servername]
         serial = SerialProxy(serial_server)
-        ELLO.__init__(self, **kwargs)
+        ELL6.__init__(self, **kwargs)
