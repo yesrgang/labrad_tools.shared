@@ -107,25 +107,30 @@ class YeSrSequencerBoard(DefaultDevice):
             raise ChannelNotFound(channel_id)
         return channel
     
-    def match_sequence_key(self, channel_sequences, channel_key):
-        channel_nameloc = channel_key.split('@') + ['']
-        channel_name = channel_nameloc[0]
-        channel_loc = channel_nameloc[1]
+    def match_sequence_key(self, subsequence, channel):
+        subsequence_keys = subsequence.keys()
 
-        for sequence_key, sequence in channel_sequences.items():
-            sequence_nameloc = sequence_key.split('@') + ['']
-            if sequence_nameloc == channel_nameloc:
-                return sequence_key
+        for key in subsequence_keys:
+            if key == channel.key:
+                return key 
 
-        for sequence_key, sequence in channel_sequences.items():
-            sequence_name = (sequence_key.split('@') + [''])[0]
-            if sequence_name == channel_name:
-                return sequence_key
-
-        for sequence_key, sequence in channel_sequences.items():
-            sequence_loc = (sequence_key.split('@') + [''])[1]
-            if sequence_loc == channel_loc:
-                return sequence_key
+        for alt_key in channel.alt_keys:
+            print alt_key
+            for key in subsequence_keys:
+                if key == alt_key:
+                    return key
+        
+        subsequence_names = [key.split('@')[0] for key in subsequence.keys()]
+        channel_name = channel.key.split('@')[0]
+        for key, name in zip(subsequence_keys, subsequence_names):
+            if name == channel_name:
+                return key 
+        
+        subsequence_locs = [(key.split('@') + [''])[1] for key in subsequence.keys()]
+        channel_loc = (channel.key.split('@')+ [''])[1]
+        for key, loc in zip(subsequence_keys, subsequence_locs):
+            if loc == channel_loc:
+                return key 
 
     def update_channel_modes(self):
         """ to be implemented by child class """
@@ -144,7 +149,7 @@ class YeSrSequencerBoard(DefaultDevice):
             
             for channel in self.channels:
                 channel_subsequence = []
-                matched_key = self.match_sequence_key(subsequence, channel.key)
+                matched_key = self.match_sequence_key(subsequence, channel)
                 if matched_key:
                     channel_subsequence = subsequence.pop(matched_key)
                 if not channel_subsequence:
@@ -154,25 +159,9 @@ class YeSrSequencerBoard(DefaultDevice):
                         ]
                 subsequence.update({channel.key: channel_subsequence})
 
+            subsequence_keys = sorted(subsequence.keys(), key=lambda x: x.split('@')[-1])
             self.save_sequence(subsequence, subsequence_name, False)
     
-#    def fix_subsequence_keys(self, subsequence_name):
-#        subsequence = self.load_sequence(subsequence_name)
-#        master_subsequence = subsequence[self.master_channel]
-#        for channel in self.channels:
-#            channel_subsequence = None
-#            matched_key = self.match_sequence_key(subsequence, channel.key)
-#            if matched_key:
-#                channel_subsequence = subsequence.pop(matched_key)
-#            if not channel_subsequence:
-#                channel_subsequence = [
-#                    self.default_sequence_segment(channel, s['dt'])
-#                        for s in master_subsequence
-#                    ]
-#            subsequence.update({channel.key: channel_subsequence})
-#
-#        self.save_sequence(subsequence, subsequence_name)
-
     def combine_subsequences(self, subsequence_list):
         combined_sequence = {}
         for channel in self.channels:
