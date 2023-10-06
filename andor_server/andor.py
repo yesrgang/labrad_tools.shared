@@ -45,7 +45,7 @@ ERROR_CODE = {
     20992: "DRV_NOT_AVAILABLE"
 }
 
-class AndorSDK(object):
+class Andor(object):
     """ provides a not-too-pythonic wrapping of the Andor C SDK. 
     
     example usage:

@@ -1,18 +1,3 @@
-""" proxy for controlling Andor cameras on remote computer through labrad
-
-example usage:
-    
-    import labrad
-    from andor_server.andor import AndorSDKProxy
-
-    cxn = labrad.connect()
-    andor = AndorSDKProxy(cxn.yesr10_andor)
-
-    # ``andor'' now acts like the local Andor C SDK python wrapper 
-    andor.SetTemperature(-60)
-    andor.CoolerON()
-    andor.StartAcquisition()
-"""
 import numpy as np
 import sys
 
@@ -59,7 +44,21 @@ ERROR_CODE = {
 }
 
 
-class AndorSDKProxy(object):
+class AndorProxy(object):
+    """ proxy for controlling Andor cameras on remote computer through labrad
+    
+    example usage:
+        import labrad
+        from andor_server.proxy import AndorProxy
+    
+        cxn = labrad.connect()
+        andor = AndorProxy(cxn.yesr10_andor)
+    
+        # ``andor'' now acts like the local Andor C SDK python wrapper 
+        andor.SetTemperature(-60)
+        andor.CoolerON()
+        andor.StartAcquisition()
+    """
     serial_number = 0
     verbose = True
     error = {}

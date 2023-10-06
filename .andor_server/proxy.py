@@ -1,6 +1,19 @@
-import ctypes
+""" proxy for controlling Andor cameras on remote computer through labrad
+
+example usage:
+    
+    import labrad
+    from andor_server.andor import AndorSDKProxy
+
+    cxn = labrad.connect()
+    andor = AndorSDKProxy(cxn.yesr10_andor)
+
+    # ``andor'' now acts like the local Andor C SDK python wrapper 
+    andor.SetTemperature(-60)
+    andor.CoolerON()
+    andor.StartAcquisition()
+"""
 import numpy as np
-import platform
 import sys
 
 ERROR_CODE = {
@@ -45,37 +58,23 @@ ERROR_CODE = {
     20992: "DRV_NOT_AVAILABLE"
 }
 
-class Andor(object):
-    """ provides a not-too-pythonic wrapping of the Andor C SDK. 
-    
-    example usage:
-        andor = AndorSDK()
-        andor.SetTemperature(-60)
-        andor.CoolerON()
-        andor.StartAcquisition()
-    """
-    dllpath = '/usr/local/lib/libandor.so'
-    initdir = '/usr/local/etc/andor/'
+
+class AndorSDKProxy(object):
+    serial_number = 0
     verbose = True
+    error = {}
 
-    def __init__(self):
-        self.error = {}
-        if platform.system() == 'Windows':
-            self.dll = ctypes.cdll(self.dllpath)
-        elif platform.system() == 'Linux':
-            self.dll = ctypes.cdll.LoadLibrary(self.dllpath)
-
-    def __del__(self):
-        self.ShutDown()
+    def __init__(self, andor_server):
+        self.andor_server = andor_server
     
     def _log(self, function, error):
         self.error[function] = error
         if self.verbose:
             print "{}: {}".format(function, ERROR_CODE[error])
-    
+
     def AbortAcquisition(self):
         """ This function aborts the current acquisition if one is active. """
-        error = self.dll.AbortAcquisition()
+        error = self.andor_server.abort_acquisition(self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
         return
 
@@ -84,7 +83,7 @@ class Andor(object):
         WaitForAcquisition function. The sleeping thread will return from 
         WaitForAcquisition with a value not equal to DRV_SUCCESS.
         """
-        error = self.dll.CancelWait()
+        error = self.andor_server.cancel_wait(self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
         return 
 
@@ -93,7 +92,7 @@ class Andor(object):
         controlled in some models until the temperature reaches 0o. Control is 
         returned immediately to the calling application.
         """
-        error = self.dll.CoolerOFF()
+        error = self.andor_serber.cooler_off(self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
         return
 
@@ -102,7 +101,7 @@ class Andor(object):
         change is controlled until the temperature is within 3o of the set 
         value. Control is returned immediately to the calling application.
         """
-        error = self.dll.CoolerON()
+        error = self.andor_server.cooler_on(self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
         return
 
@@ -116,8 +115,8 @@ class Andor(object):
         Returns:
             (array) image.
         """
-        arr = (ctypes.c_int * size)()
-        error = self.dll.GetAcquiredData(ctypes.pointer(arr), size)
+        error, arr = self.andor_server.get_acquired_data(self.serial_number, 
+                                                         size)
         self._log(sys._getframe().f_code.co_name, error)
         return np.array(arr, dtype=np.uint32)
     
@@ -130,8 +129,8 @@ class Andor(object):
         Returns:
             (array) image.
         """
-        arr = (ctypes.c_int * size)()
-        error = self.dll.GetAcquiredData16(ctypes.pointer(arr), size)
+        error, arr = self.andor_server.get_acquired_data_16(self.serial_number, 
+                                                            size)
         self._log(sys._getframe().f_code.co_name, error)
         return np.array(arr, dtype=np.uint16)
 
@@ -156,12 +155,10 @@ class Andor(object):
             (int) number of accumulations completed in the current kinetic scan.
             (int) number of kinetic scans completed.
         """
-        acc = ctypes.c_long()
-        series = ctypes.c_long()
-        error = self.dll.GetAcquisitionProgress(ctypes.byref(acc), 
-                                                ctypes.byref(series))
+        error, acc, series = self.andor_server.get_acquisition_progress(
+                self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
-        return acc.value, series.value
+        return acc, series
         
     def GetAcquisitionTimings(self):
         """ This function will return the current "valid" acquisition timing 
@@ -178,14 +175,10 @@ class Andor(object):
             accumulate (float): valid accumulate cycle time in seconds
             kinetic (float): valid kinetic cycle time in seconds
         """
-        exposure = ctypes.c_float()
-        accumulate = ctypes.c_float()
-        kinetic  = ctypes.c_float()
-        error = self.dll.GetAcquisitionTimings(ctypes.byref(exposure), 
-                                               ctypes.byref(accumulate),
-                                               ctypes.byref(kinetic))
+        error, exposure, accumultate, kinetic = self.andor_server.get_acquisition_timings(
+                self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
-        return exposure.value, accumulate.value, kinetic.value
+        return exposure, accumulate, kinetic
 
     def GetAvailableCameras(self):
         """ Returns the total number of Andor cameras currently installed. 
@@ -196,10 +189,10 @@ class Andor(object):
         Returns:
             (int) total number of cameras currently installed
         """
-        totalCameras = ctypes.c_long()
-        error = self.dll.GetAvailableCameras(totalCameras)
+        error, totalCameras = self.andor_server.get_available_cameras(
+                self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
-        return totalCameras.value
+        return totalCameras
 
     def GetBitDepth(self, channel):
         """ This function will retrieve the size in bits of the dynamic range 
@@ -210,10 +203,9 @@ class Andor(object):
         Returns:
             (int) dynamic range in bits
         """
-        depth = ctypes.c_int()
-        error = self.dll.GetBitDepth(channel, ctypes.byref(depth))
+        error, depth = self.andor_server.get_bit_depth(self.serial_number, channel)
         self._log(sys._getframe().f_code.co_name, error)
-        return depth.value
+        return depth
 
     def GetCameraHandle(self, cameraIndex):
         """ Returns the handle for the camera specified. 
@@ -229,17 +221,17 @@ class Andor(object):
         Returns:
             (int) handle of the camera.
         """ 
-        cameraHandle = ctypes.c_long()
-        error = self.dll.GetCameraHandle(cameraIndex, ctypes.byref(cameraHandle))
+        error, cameraHandle = self.andor_server.get_camera_handle(
+                self.serial_number, cameraIndex)
         self._log(sys._getframe().f_code.co_name, error)
-        return cameraHandle.value
+        return cameraHandle
     
     def GetCameraSerialNumber(self):
         """ this function will retrieve camera's serial number. """
-        number = ctypes.c_int()
-        error = self.dll.GetCameraSerialNumber(ctypes.byref(number))
+        error, number = self.andor_server.get_camera_serial_number(
+                self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
-        return number.value
+        return number
 
     def GetCurrentCamera(self):
         """ Return the handle of thecurrently selected camera.
@@ -250,10 +242,10 @@ class Andor(object):
         Returns:
             (int) handle of the currently selected camera
         """
-        cameraHandle = ctypes.c_long()
-        error = self.dll.GetCurrentCamera(ctypes.byref(cameraHandle))
+        error, cameraHandle = self.andor_server.get_current_camera(
+                self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
-        return cameraHandle.value
+        return cameraHandle
 
     def GetDetector(self):
         """ This function returns the size of the detector in pixels. The 
@@ -264,24 +256,21 @@ class Andor(object):
             (int) number of horizontal pixels.
             (int) number of vertical pixels.
         """
-        xpixels = ctypes.c_int()
-        ypixels = ctypes.c_int()
-        error = self.dll.GetDetector(ctypes.byref(xpixels), 
-                                     ctypes.byref(ypixels))
+        error, xpixels, ypixels = self.andor_server.get_detector(
+                self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
-        return xpixels.value, ypixels.value
+        return xpixels, ypixels
 
     def GetEMCCDGain(self):
-        """ Returns the current gain setting. The meaning of the value returned 
+        """ Returns the current gain setting. The meaning of the value returned
         depends on the EM Gain mode.
 
         Returns:
             (int) current EM gain setting.
         """
-        gain = ctypes.c_int()
-        error = self.dll.GetEMCCDGain(ctypes.byref(gain))
+        error, gain = self.andor_server.get_emccd_gain(self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
-        return gain.value
+        return gain
      
     def GetEMGainRange(self):
         """ Returns the minimum and maximum values of the current selected EM 
@@ -291,11 +280,10 @@ class Andor(object):
             (int) lowest gain setting
             (int) highest gain setting
         """
-        low = ctypes.c_int()
-        high = ctypes.c_int()
-        error = self.dll.GetEMGainRange(ctypes.byref(low), ctypes.byref(high))
+        error, low, high = self.andor_server.get_em_gain_range(
+                self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
-        return low.value, high.value
+        return low, high
       
     def GetFastestRecommendedVSSpeed(self):
         """ As your Andor SDK system may be capable of operating at more than 
@@ -311,12 +299,10 @@ class Andor(object):
             (int) index of the fastest recommended vertical shift speed.
             (float) speed in microseconds per pixel shift.
         """
-        index = ctypes.c_int()
-        speed = ctypes.c_float()
-        error = self.dll.GetFastestRecommendedVSSpeed(ctypes.byref(index), 
-                                                      ctypes.byref(speed))
+        error, index, speed = self.andor_server.get_fastest_recommended_vs_speed(
+                self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
-        return index.value, speed.value
+        return index, speed
 
     def GetHSSpeed(self, channel, typ, index):
         """ As your Andor system is capable of operating at more than one 
@@ -334,10 +320,10 @@ class Andor(object):
         Returns:
             (float) speed in in MHz.
         """
-        speed = ctypes.c_float()
-        error = self.dll.GetHSSpeed(channel, typ, index, ctypes.byref(speed))
+        error, speed = self.andor_server.get_hs_speed(self.serial_number, 
+                                                      channel, typ, index)
         self._log(sys._getframe().f_code.co_name, error)
-        return speed.value
+        return speed
             
     def GetNumberADChannels(self):
         """ As your Andor SDK system may be capable of operating with more than 
@@ -346,10 +332,10 @@ class Andor(object):
         Returns:
             (int) number of allowed channels
         """
-        channels = ctypes.c_int()
-        error = self.dll.GetNumberADChannels(ctypes.byref(channels))
+        error, channels = self.andor_server.get_number_ad_channels(
+                self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
-        return channels.value
+        return channels
 
     def GetNumberHSSpeeds(self, channel, typ):
         """ As your Andor SDK system is capable of operating at more than one 
@@ -364,11 +350,10 @@ class Andor(object):
         Returns:
             (int) number of allowed horizontal speeds
         """
-        speeds = ctypes.c_int()
-        error = self.dll.GetNumberHSSpeeds(channel, typ, 
-                                           ctypes.byref(speeds))
+        error, speeds = self.andor_server.GetNumberHSSpeeds(self.serial_number, 
+                                                            channel, typ)
         self._log(sys._getframe().f_code.co_name, error)
-        return speeds.value
+        return speeds
 
     def GetNumberPreAmpGains(self):
         """ Available in some systems are a number of pre amp gains that can be 
@@ -379,10 +364,10 @@ class Andor(object):
         Returns:
             (int) number of allowed pre amp gains
         """ 
-        noGains = ctypes.c_int()
-        error = self.dll.GetNumberPreAmpGains(ctypes.byref(noGains))
+        error, noGains = self.andor_server.get_number_pre_amp_gains(
+                self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
-        return noGains.value
+        return noGains
 
     def GetNumberVSSpeeds(self):
         """ As your Andor system may be capable of operating at more than one 
@@ -392,10 +377,10 @@ class Andor(object):
         Returns:
             (int) number of allowed vertical speeds
         """
-        speeds = ctypes.c_int()
-        error = self.dll.GetNumberVSSpeeds(ctypes.byref(speeds))
+        error, speeds = self.andor_server.get_number_vs_speeds(
+                self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
-        return speeds.value
+        return speeds
 
     def GetPreAmpGain(self, index):
         """ For those systems that provide a number of pre amp gains to apply to 
@@ -409,10 +394,10 @@ class Andor(object):
         Returns:
             (float) gain factor for this index.
         """
-        gain = ctypes.c_float()
-        error = self.dll.GetPreAmpGain(index, ctypes.byref(gain))
+        error, gain = self.andor_server.get_pre_amp_gain(self.serial_number, 
+                                                         index)
         self._log(sys._getframe().f_code.co_name, error)
-        return gain.value
+        return gain
 
     def GetStatus(self):
         """ This function will return the current status of the Andor SDK 
@@ -423,10 +408,9 @@ class Andor(object):
         Returns:
             (str) current status
         """
-        status = ctypes.c_int()
-        error = self.dll.GetStatus(ctypes.byref(status))
+        error, status = self.andor_server.get_status(self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
-        return ERROR_CODE[status.value]
+        return ERROR_CODE[status]
 
     def GetTemperature(self):
         """ This function returns the temperature of the detector to the nearest 
@@ -435,10 +419,10 @@ class Andor(object):
         Returns:
             (int) temperature of the detector
         """
-        temperature = ctypes.c_int()
-        error = self.dll.GetTemperature(ctypes.byref(temperature))
+        error, temperature = self.andor_server.get_temperature(
+                self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
-        return temperature.value
+        return temperature
 
     def GetVSSpeed(self, index):
         """ As your Andor SDK system may be capable of operating at more than 
@@ -450,10 +434,9 @@ class Andor(object):
         Returns:
             (float) speed in microseconds per pixel shift.
         """
-        speed = ctypes.c_float()
-        error = self.dll.GetVSSpeed(index, ctypes.byref(speed))
+        error, speed = self.andor_server.get_vs_speed(self.serial_number, index)
         self._log(sys._getframe().f_code.co_name, error)
-        return speed.value
+        return speed
 
     def Initialize(self):
         """ This function will initialize the Andor SDK system. 
@@ -464,9 +447,9 @@ class Andor(object):
         readout speeds etc. If your system has multiple cameras then see the
         section controlling multiple cameras.
         """
-        error = self.dll.Initialize(self.initdir)
+        error, initdir = self.andor_server.initialize(self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
-        return self.initdir
+        return initdir
         
     def IsCoolerOn(self):
         """ This function checks the status of the cooler.
@@ -476,10 +459,10 @@ class Andor(object):
                 0 Cooler is OFF.
                 1 Cooler is ON.
         """
-        iCoolerStatus = ctypes.c_int()
-        error = self.dll.IsCoolerOn(ctypes.byref(iCoolerStatus))
+        error, iCoolerStatus = self.andor_server.is_cooler_on(
+                self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
-        return iCoolerStatus.value
+        return iCoolerStatus
 
     def SetAccumulationCycleTime(self, time):
         """ This function will set the accumulation cycle time to the nearest 
@@ -489,7 +472,8 @@ class Andor(object):
         Args:
             time (float): the accumulation cycle time in seconds.
         """
-        error = self.dll.SetAccumulationCycleTime(ctypes.c_float(time))
+        error = self.andor_server.set_accumulation_cycle_time(
+                self.serial_number, time)
         self._log(sys._getframe().f_code.co_name, error)
         return 
 
@@ -505,7 +489,7 @@ class Andor(object):
                 4 Fast Kinetics
                 5 Run till abort
         """
-        error = self.dll.SetAcquisitionMode(mode)
+        error = self.andor_server.set_acquisition_mode(self.serial_number, mode)
         self._log(sys._getframe().f_code.co_name, error)
         return
         
@@ -517,7 +501,7 @@ class Andor(object):
         Args:
             index (int): the channel to be used. 0 to GetNumberADChannels-1
         """
-        error = self.dll.SetADChannel(channel)
+        error = self.andor_server.set_ad_channel(self.serial_number, channel)
         self._log(sys._getframe().f_code.co_name, error)
         return 
         
@@ -530,7 +514,7 @@ class Andor(object):
                 1 Temperature is maintained on ShutDown
                 0 Returns to ambient temperature on ShutDown
         """
-        error = self.dll.SetCoolerMode(mode)
+        error = self.andor_server.set_cooler_mode(self.serial_number, mode)
         self._log(sys._getframe().f_code.co_name, error)
         return
         
@@ -546,7 +530,8 @@ class Andor(object):
         Args:
             cameraHandle (int): Selects the active camera.
         """
-        error = self.dll.SetCurrentCamera(cameraHandle)
+        error = self.andor_server.set_current_camera(self.serial_number, 
+                                                     cameraHandle)
         self._log(sys._getframe().f_code.co_name, error)
         return
 
@@ -564,7 +549,8 @@ class Andor(object):
                 1 Enable access
                 0 Disable access
         """
-        error = self.dll.SetEMAdvanced(gainAdvanced)
+        error = self.andor_server.set_em_advanced(self.serial_number, 
+                                                  gainAdvanced)
         self._log(sys._getframe().f_code.co_name, error)
         return
 
@@ -577,7 +563,7 @@ class Andor(object):
         Args:
             gain (int): amount of fain applied.
         """
-        error = self.dll.SetEMCCDGain(gain)
+        error = self.andor_server.set_emccd_gain(self.serial_number, gain)
         self._log(sys._getframe().f_code.co_name, error)
         return
         
@@ -594,7 +580,7 @@ class Andor(object):
                 2 Linear mode.
                 3 Real EM gain
         """
-        error = self.dll.SetEMGainMode(mode)
+        error = self.andor_server.set_em_gain_mode(self.serial_number, mode)
         self._log(sys._getframe().f_code.co_name, error)
         return
         
@@ -606,7 +592,7 @@ class Andor(object):
         Args:
             time (float): the exposure time in seconds.
         """
-        error = self.dll.SetExposureTime(ctypes.c_float(time))
+        error = self.andor_server.set_exposure_time(self.serial_number, time)
         self._log(sys._getframe().f_code.co_name, error)
         return
 
@@ -625,7 +611,7 @@ class Andor(object):
                 1 fan on low
                 2 fan off
         """
-        error = self.dll.SetFanMode(mode)
+        error = self.andor_server.set_fan_mode(self.serial_number, mode)
         self._log(sys._getframe().f_code.co_name, error)
         return
     
@@ -642,9 +628,9 @@ class Andor(object):
             hbin (int): horizontal binning.
             vbin (int): vertical binning (only used when in image mode).
         """
-        error = self.dll.SetFastKinetics(exposedRows, seriesLength, 
-                                           ctypes.c_float(time), mode, hbin, 
-                                           vbin)
+        error = self.andor_server.set_fast_kinetics(
+                self.serial_number, exposedRows, seriesLength, time, mode, hbin, 
+                vbin)
         self._log(sys._getframe().f_code.co_name, error)
         return 
 
@@ -663,9 +649,9 @@ class Andor(object):
             offset (int): offset of first row to be used in Fast Kinetics from 
                 the bottom of the CCD.
         """
-        error = self.dll.SetFastKineticsEx(exposedRows, seriesLength, 
-                                           ctypes.c_float(time), mode, hbin, 
-                                           vbin, offset)
+        error = self.andor_server.set_fast_kinetics_ex(
+                self.serial_number, exposedRows, seriesLength, time, mode, hbin, 
+                vbin, offset)
         self._log(sys._getframe().f_code.co_name, error)
         return 
 
@@ -679,7 +665,8 @@ class Andor(object):
                 0 OFF
                 1 ON
         """ 
-        error = self.dll.SetFrameTransferMode(mode)
+        error = self.andor_server.set_frame_transfer_mode(self.serial_number, 
+                                                          mode)
         self._log(sys._getframe().f_code.co_name, error)
         return 
         
@@ -697,7 +684,7 @@ class Andor(object):
             index (int): the horizontal speed to be used. 
                 0 to GetNumberHSSpeeds()-1
         """
-        error = self.dll.SetHSSpeed(typ, index)
+        error = self.andor_server.set_hs_speed(self.serial_number, typ, index)
         self._log(sys._getframe().f_code.co_name, error)
         return
         
@@ -713,7 +700,8 @@ class Andor(object):
             vstart (int): Start row (inclusive).
             vend (int): End row (inclusive).
         """
-        error = self.dll.SetImage(hbin, vbin, hstart, hend, vstart, vend)
+        error = self.andor_server.set_image(self.serial_number, hbin, vbin, 
+                                            hstart, hend, vstart, vend)
         self._log(sys._getframe().f_code.co_name, error)
         return 
 
@@ -732,7 +720,8 @@ class Andor(object):
                 1 Enables Flipping
                 0 Disables Flipping
         """
-        error = self.dll.SetImageFlip(iHFlip, iVFlip)
+        error = self.andor_server.set_image_flip(self.serial_number, iHFlip, 
+                                                 iVFlip)
         self._log(sys._getframe().f_code.co_name, error)
         return
 
@@ -756,7 +745,7 @@ class Andor(object):
                 1 Rotate 90 degrees clockwise
                 2 Rotate 90 degrees anti-clockwise
         """
-        error = self.dll.SetImageRotate(iRotate)
+        error = self.andor_server.set_image_rotate(self.serial_number, iRotate)
         self._log(sys._getframe().f_code.co_name, error)
         return
 
@@ -768,7 +757,7 @@ class Andor(object):
         Args:
             time (float): the kinetic cycle time in seconds.
         """
-        error = self.dll.SetKineticCycleTime(ctypes.c_float(time))
+        error = self.andor_server.set_kinetic_cycle_time(self.serial_number, time)
         self._log(sys._getframe().f_code.co_name, error)
         return 
 
@@ -780,7 +769,8 @@ class Andor(object):
         Args:
             number (int): number of scans to accumulate
         """
-        error = self.dll.SetNumberAccumulations(number)
+        error = self.andor_server.set_number_accumulations(self.serial_number, 
+                                                           number)
         self._log(sys._getframe().f_code.co_name, error)
         return 
 
@@ -792,7 +782,8 @@ class Andor(object):
         Args:
             number (int): number of scans to store.
         """
-        error = self.dll.SetNumberKinetics(number)
+        error = self.andor_server.set_number_kinetics(self.serial_number, 
+                                                      number)
         self._log(sys._getframe().f_code.co_name, error)
         return 
 
@@ -806,7 +797,8 @@ class Andor(object):
                 0 Standard EMCCD gain register (default)/Conventional(clara).
                 1 Conventional CCD register/Extended NIR mode(clara).
         """
-        error = self.dll.SetOutputAmplifier(index)
+        error = self.andor_server.set_output_amplifier(self.serial_number, 
+                                                       index)
         self._log(sys._getframe().f_code.co_name, error)
         return 
         
@@ -819,7 +811,7 @@ class Andor(object):
         Args:
             index (int): index pre amp gain table. 0 to GetNumberPreAmpGains-1
         """
-        error = self.dll.SetPreAmpGain(index)
+        error = self.andor_server.set_pre_amp_gain(self.serial_number, index)
         self._log(sys._getframe().f_code.co_name, error)
         return
 
@@ -835,7 +827,7 @@ class Andor(object):
                 3 Single-Track
                 4 Image
         """
-        error = self.dll.SetReadMode(mode)
+        error = self.andor_server.set_read_mode(self.serial_number, mode)
         self._log(sys._getframe().f_code.co_name, error)
         return
 
@@ -860,7 +852,8 @@ class Andor(object):
             closingtime (int): Time shutter takes to close (milliseconds)
             openingtime (int): Time shutter takes to open (milliseconds)
         """ 
-        error = self.dll.SetShutter(typ, mode, closingtime, openingtime)
+        error = self.andor_server.set_shutter(self.serial_number, typ, mode, 
+                                              closingtime, openingtime)
         self._log(sys._getframe().f_code.co_name, error)
         return 
 
@@ -901,8 +894,9 @@ class Andor(object):
                 4 Open for FVB series
                 5 Open for any series
         """
-        error = self.dll.SetShutterEx(typ, mode, closingtime, openingtime, 
-                                      extmode)
+        error = self.andor_server.set_shutter_ex(self.serial_number, typ, mode, 
+                                                 closingtime, openingtime, 
+                                                 extmode)
         self._log(sys._getframe().f_code.co_name, error)
         return 
         
@@ -915,7 +909,7 @@ class Andor(object):
             temperature (int): the temperature in Centigrade.
                 Valid range is given by GetTemperatureRange
         """
-        error = self.dll.SetTemperature(temperature)
+        error = self.andor_server.set_temperature(self.serial_number, temperature)
         self._log(sys._getframe().f_code.co_name, error)
         return
 
@@ -933,7 +927,7 @@ class Andor(object):
                 10 Software Trigger
                 12 External Charge Shifting
         """ 
-        error = self.dll.SetTriggerMode(mode)
+        error = self.andor_server.set_trigger_mode(self.serial_number, mode)
         self._log(sys._getframe().f_code.co_name, error)
         return
 
@@ -945,13 +939,13 @@ class Andor(object):
             index (int): index into the vertical speed table. 
                 0 to GetNumberVSSpeeds-1
         """
-        error = self.dll.SetVSSpeed(index)
+        error = self.andor_server.set_vs_speed(self.serial_number, index)
         self._log(sys._getframe().f_code.co_name, error)
         return
     
     def ShutDown(self):
         """ This function will close the AndorMCD system down. """
-        error = self.dll.ShutDown()
+        error = self.andor_server.shut_down(self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
         return
         
@@ -959,7 +953,7 @@ class Andor(object):
         """ This function starts an acquisition. The status of the acquisition 
         can be monitored via GetStatus().
         """
-        error = self.dll.StartAcquisition()
+        error = self.andor_server.start_acquisition(self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
         return 
 
@@ -979,6 +973,6 @@ class Andor(object):
         the first one will be ignored. Care should be taken in this case, as 
         you may have to use CancelWait to exit the function.
         """
-        error = self.dll.WaitForAcquisition()
+        error = self.andor_server.wait_for_acquisition(self.serial_number)
         self._log(sys._getframe().f_code.co_name, error)
         return 

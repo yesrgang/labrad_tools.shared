@@ -56,7 +56,20 @@ class AWGServer(DeviceServer):
             device.set_waveform(waveform)
         response = device.get_waveform()
         return response
+    
+    @setting(11, name='s', amplitude='v')
+    def amplitude(self, c, name, amplitude=None):
+        device = None
+        try:
+            device = self._get_device(name)
+        except:
+            self._reload_device(name, {})
+            device = self._get_device(name)
 
+        if amplitude is not None:
+            device.set_amplitude(amplitude)
+        return device.get_amplitude()
+            
 
 Server = AWGServer
 

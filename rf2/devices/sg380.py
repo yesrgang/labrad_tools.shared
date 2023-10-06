@@ -6,6 +6,7 @@ class AmplitudeOutOfBoundsError(Exception):
 
 class SG380(object):
     _frequency_range = (1e6, 2e9)
+    _amplitude_range = (-80, 10)
     _vxi11_address = None
 
     def __init__(self, **kwargs):
@@ -14,7 +15,7 @@ class SG380(object):
         if 'vxi11' not in globals():
             global vxi11
             import vxi11
-        self._inst = vxi11.Instrument(self.vxi11_address)
+        self._inst = vxi11.Instrument(self._vxi11_address)
 
     @property
     def frequency(self):
@@ -26,10 +27,23 @@ class SG380(object):
     def frequency(self, frequency):
         if frequency < min(self._frequency_range) or frequency > max(self._frequency_range):
             raise FrequencyOutOfBoundsError(frequency)
-        print frequency
+#        print frequency
         command = 'FREQ {}'.format(frequency)
         self._inst.write(command)
+   
+    @property
+    def amplitude(self):
+        command = 'AMPR?'
+        ans = self._inst.ask(command)
+        return float(ans)
     
+    @amplitude.setter
+    def amplitude(self, amplitude):
+        if amplitude < min(self._amplitude_range) or amplitude > max(self._amplitude_range):
+            raise AmplitudeOutOfBoundsError(amplitude)
+#        print frequency
+        command = 'AMPR {}'.format(amplitude)
+        self._inst.write(command)
 class SG380Proxy(SG380):
     _vxi11_servername = None
 

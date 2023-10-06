@@ -227,5 +227,5 @@ Server = SequencerServer()
     
 if __name__ == "__main__":
     from labrad import util
-    reactor.suggestThreadPoolSize(4)
+    reactor.suggestThreadPoolSize(10)
     util.runServer(Server)

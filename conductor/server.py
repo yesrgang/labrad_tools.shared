@@ -731,9 +731,11 @@ class ConductorServer(ThreadedServer):
         Returns:
             None
         """
+        suppress_errors = False
         ti = time.time()
         for parameter_name in sort_by_priority(self.parameters):
             try:
+                print parameter_name
                 self._update_parameter(parameter_name)
             except:
                 if not suppress_errors:
@@ -866,7 +868,7 @@ class ConductorServer(ThreadedServer):
         self._advance(suppress_errors)
     
     def _advance(self, suppress_errors=False):
-        print time.time()
+#        print time.time()
         # prevent multiple advances from happening at the same time
         if self.is_advancing:
             raise AlreadyAdvancing()
@@ -1016,6 +1018,10 @@ class ConductorServer(ThreadedServer):
         if not os.path.isdir(log_dir):
             os.makedirs(log_dir)
         open(log_path, 'a').close()
+
+    @setting(11, update='s')
+    def send_update(self, c, update):
+        self.update(update)
 
     def _send_update(self, update):
         update_json = json.dumps(update, default=lambda x: None)

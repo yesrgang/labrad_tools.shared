@@ -6,12 +6,13 @@ class YeSrDigitalChannel(object):
     programmable_sequence = None
 
     def __init__(self, loc=None, name=None, mode='auto', manual_output=False,
-            invert=False):
+            invert=False, delay=0):
         self.loc = loc
         self.name = str(name)
         self.mode = str(mode)
         self.manual_output = bool(manual_output)
         self.invert = bool(invert)
+        self.delay = int(delay)
 
     def set_board(self, board):
         self.board = board

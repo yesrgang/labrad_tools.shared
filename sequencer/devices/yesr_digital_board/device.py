@@ -62,7 +62,16 @@ class YeSrDigitalBoard(YeSrSequencerBoard):
         # time intervals
         for c in self.channels:
             total_ticks = 0
-            for s in sequence[c.key]:
+            for s in sequence[c.key][:1]:
+                dt = time_to_ticks(self.clk, s['dt'])
+                dt += c.delay
+                s.update({'dt': dt, 't': total_ticks})
+                if dt > MAX_TICKS:
+                    if c.key == self.master_channel:
+                        print "trigger mask:", bin(dt)[26:]
+                        s.update({'out': False})
+                total_ticks += dt
+            for s in sequence[c.key][1:]:
                 dt = time_to_ticks(self.clk, s['dt'])
                 s.update({'dt': dt, 't': total_ticks})
                 if dt > MAX_TICKS:

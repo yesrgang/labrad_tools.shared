@@ -32,3 +32,12 @@ class AG335xxx(DefaultDevice):
         command = 'SOUR{}:FUNC:ARB?'.format(self.source)
         ans = self.vxi11.ask(command)
         return ans
+    
+    def set_amplitude(self, amplitude):
+        command = 'SOUR{}:VOLT {}'.format(self.source, amplitude)
+        self.vxi11.write(command)
+    
+    def get_amplitude(self):
+        command = 'SOUR{}:VOLT?'.format(self.source)
+        ans = self.vxi11.ask(command)
+        return float(ans)

@@ -1,0 +1,22 @@
+Generate SSH key pair
+-> run: ssh-keygen -t ecdsa -b 521
+-> (don't generate a passphrase)
+-> add public key (~/.ssh/id_ecdsa.pub) to accepted keys on github.com
+
+Configure git repo
+-> if the target directory is not a github repo yet (does not contain .git directory), run: 'git init' inside the directory
+-> show current git configuration by running
+        git config --list
+        git config --local --list
+-> run: git config --local user.name "<git_username>"
+        git config --local user.email "<git_email>"
+        git remote add backup <ssh_github_url>
+
+Establish first SSH connection and push current contents of repo
+-> run: git push -u backup master
+-> acknowledge SSH connection to github.com
+
+Create cron job which executes git_backup.sh daily
+-> run: crontab -e
+-> in the editor window append the following line (runs every day at 3am)
+-> 0 3 * * * /path/to/git/repo/git_backup.sh

@@ -9,6 +9,9 @@ from sequencer.devices.yesr_sequencer_board.helpers import time_to_ticks
 #from sequencer.devices.yesr_sequencer_board.helpers import combine_sequences
 from ok_server.proxy import OKProxy
 
+class SequenceNotFoundError(Exception):
+    """ Unable to find sequence""" 
+
 
 class YeSrSequencerBoard(DefaultDevice):
     sequencer_type = None
@@ -25,7 +28,8 @@ class YeSrSequencerBoard(DefaultDevice):
     sequence_pipe = 0x80
     clk = 50e6 # [Hz]
     
-    sequence_directory = '/home/srgang/srqdata/sequences/{}/'
+#    sequence_directory = '/home/srgang/srqdata/sequences/{}/'
+    sequence_directory = '/srqdata2/sequences/{}/'
     subsequence_names = None
     sequence = None
     raw_sequene = None
@@ -67,7 +71,7 @@ class YeSrSequencerBoard(DefaultDevice):
             if os.path.exists(sequencepath):
                 break
         if not os.path.exists(sequencepath):
-            raise SequenceNotFoundError(sequence_name)
+            raise SequenceNotFoundError(sequencename)
         
         with open(sequencepath, 'r') as infile:
             sequence = json.load(infile)
