@@ -68,6 +68,7 @@ class Server(LabradServer):
     @setting(2)
     def arm_mako2(self, c):
         with Vimba.get_instance() as vimba:
+            print('start to arm mako2')
             with vimba.get_camera_by_id("DEV_000F315B959E") as cam:
                 cam.GVSPAdjustPacketSize.run()
                 while not cam.GVSPAdjustPacketSize.is_done():
@@ -84,6 +85,7 @@ class Server(LabradServer):
                 cam.Gain.set(0)
         
                 cam.AcquisitionMode.set('SingleFrame')
+            print('arm moko2 done')
 
 
     @setting(3, data_path='s')
