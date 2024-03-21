@@ -2,7 +2,7 @@ import numpy as np
 from vimba import *
 
 with Vimba.get_instance() as vimba:
-    with vimba.get_camera_by_id("DEV_000F315B946B") as cam:
+    with vimba.get_camera_by_id("DEV_000F315B959E") as cam:
         cam.GVSPAdjustPacketSize.run()
         while not cam.GVSPAdjustPacketSize.is_done():
             pass
@@ -23,10 +23,11 @@ with Vimba.get_instance() as vimba:
         image = cam.get_frame(timeout_ms=10000).as_numpy_ndarray()
         print(2)
 
-#image = None
-#bright = None
-#with Vimba.get_instance() as vimba:
-#    with vimba.get_camera_by_id("DEV_000F315B946B") as cam:
-#        print(1)
-#        print(2)
-##        bright = cam.get_frame(timeout_ms=1000000).as_numpy_ndarray()
+image = None
+bright = None
+with Vimba.get_instance() as vimba:
+    with vimba.get_camera_by_id("DEV_000F315B946B") as cam:
+        print(1)
+        print(2)
+        bright = cam.get_frame(timeout_ms=1000000).as_numpy_ndarray()
+        print('len of picture : {}'.format(len(bright)))

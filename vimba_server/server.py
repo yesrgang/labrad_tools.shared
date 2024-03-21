@@ -69,6 +69,7 @@ class Server(LabradServer):
     def arm_mako2(self, c):
         with Vimba.get_instance() as vimba:
             print('start to arm mako2')
+            print(vimba)
             with vimba.get_camera_by_id("DEV_000F315B959E") as cam:
                 cam.GVSPAdjustPacketSize.run()
                 while not cam.GVSPAdjustPacketSize.is_done():
@@ -95,18 +96,33 @@ class Server(LabradServer):
     def _get_frames_mako2(self, data_path):
         image = None
         bright = None
+        print(data_path)
         with Vimba.get_instance() as vimba:
             with vimba.get_camera_by_id("DEV_000F315B959E") as cam:
-                image = cam.get_frame(timeout_ms=1000000).as_numpy_ndarray()
-                bright = cam.get_frame(timeout_ms=1000000).as_numpy_ndarray()
+                image = cam.get_frame()
+                #image = cam.get_frame(timeout_ms=1000000).as_numpy_ndarray()
+                print("image length :{}".format(len(image)))
+                #bright = cam.get_frame()
+                #bright = cam.get_frame(timeout_ms=1000000).as_numpy_ndarray()
                 image = np.rot90(image, -1)
-                bright = np.rot90(bright, -1)
+                #bright = np.rot90(bright, -1)
         
         with h5py.File(data_path, "w") as h5f:
             h5f.create_dataset("image", data=np.squeeze(image, -1), compression="gzip", compression_opts=4)
-            h5f.create_dataset("bright", data=np.squeeze(bright, -1), compression="gzip", compression_opts=4)
+            #h5f.create_dataset("bright", data=np.squeeze(bright, -1), compression="gzip", compression_opts=4)
 
         self.update(data_path)
+
+    @setting(4)
+    def list_camera(self,c):
+        with Vimba.get_instance() as vimba:
+            cams = vimba.get_all_cameras()
+            print('cameras founds: {}'.format(len(cams)))
+
+            for cam in cams:
+                print('camera name: {}'.format(cam.get_name()))
+                print('camera ID: {}'.format(cam.get_id()))
+                print('Interface ID : {}'.format(cam.get_interface_id()))
 
 
 if __name__ == "__main__":
