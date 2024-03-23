@@ -99,17 +99,15 @@ class Server(LabradServer):
         print(data_path)
         with Vimba.get_instance() as vimba:
             with vimba.get_camera_by_id("DEV_000F315B959E") as cam:
-                image = cam.get_frame()
-                #image = cam.get_frame(timeout_ms=1000000).as_numpy_ndarray()
-                print("image length :{}".format(len(image)))
-                #bright = cam.get_frame()
-                #bright = cam.get_frame(timeout_ms=1000000).as_numpy_ndarray()
+                image = cam.get_frame(timeout_ms=1000000).as_numpy_ndarray()
+                print("image size :{}".format(np.shape(image)))
+                bright = cam.get_frame(timeout_ms=1000000).as_numpy_ndarray()
                 image = np.rot90(image, -1)
-                #bright = np.rot90(bright, -1)
+                bright = np.rot90(bright, -1)
         
         with h5py.File(data_path, "w") as h5f:
             h5f.create_dataset("image", data=np.squeeze(image, -1), compression="gzip", compression_opts=4)
-            #h5f.create_dataset("bright", data=np.squeeze(bright, -1), compression="gzip", compression_opts=4)
+            h5f.create_dataset("bright", data=np.squeeze(bright, -1), compression="gzip", compression_opts=4)
 
         self.update(data_path)
 
