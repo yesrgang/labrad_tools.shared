@@ -29,6 +29,8 @@ class Server(LabradServer):
     @setting(0)
     def arm_mako1(self, c):
         with Vimba.get_instance() as vimba:
+            print('start to arm mako1')
+            print(vimba)
             with vimba.get_camera_by_id("DEV_000F315B946B") as cam:
                 cam.GVSPAdjustPacketSize.run()
                 while not cam.GVSPAdjustPacketSize.is_done():
@@ -45,6 +47,7 @@ class Server(LabradServer):
                 cam.Gain.set(0)
         
                 cam.AcquisitionMode.set('SingleFrame')
+            print('arm mako1 done!')
 
 
     @setting(1, data_path='s')
@@ -57,6 +60,7 @@ class Server(LabradServer):
         with Vimba.get_instance() as vimba:
             with vimba.get_camera_by_id("DEV_000F315B946B") as cam:
                 image = cam.get_frame(timeout_ms=1000000).as_numpy_ndarray()
+                print("image size :{}".format(np.shape(image)))
                 bright = cam.get_frame(timeout_ms=1000000).as_numpy_ndarray()
         
         with h5py.File(data_path, "w") as h5f:
