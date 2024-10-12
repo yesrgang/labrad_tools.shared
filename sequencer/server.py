@@ -35,6 +35,8 @@ def master_last(devices):
 class SequencerServer(DeviceServer):
     name = 'sequencer'
     update = Signal(UPDATE_ID, 'signal: update', 's')
+
+    jsonstr_sequences = None
     
     def _get_channel(self, channel_id):
         """
@@ -173,13 +175,31 @@ class SequencerServer(DeviceServer):
         return response_json
 
     def _sequence(self, request={}):
+        ## check if sequence requires jsonstr_sequences
+        #has_jsonstr = False
+        #if request != {}:
+        #    for dev,seq in request.items():
+        #        if seq is not None:
+        #            for string in seq:
+        #                if '.jsonstr' in string:
+        #                    print('jsonstr detected!')
+        #                    has_jsonstr = True
+        #                    break
+        #        if has_jsonstr:
+        #            break
+        #if not has_jsonstr or not hasattr(self, 'jsonstr_sequences'):
+        #    self.jsonstr_sequences = None
+        #print('sequence:')
+        #print(self.jsonstr_sequences)
+
+        # program sequence
         if request == {}:
             request = {device_name: None for device_name in self.devices}
         response = {}
         for device_name, device_request in request.items():
             device = self._get_device(device_name)
             if device_request is not None:
-                device.set_sequence(device_request)
+                device.set_sequence(device_request, self.jsonstr_sequences)
             device_response = device.get_sequence()
             response.update({device_name: device_response})
         self._send_update({'sequence': response})
@@ -222,6 +242,11 @@ class SequencerServer(DeviceServer):
             response.update({device_name: device_response})
         self._send_update({'running': response})
         return response
+
+    @setting(16)
+    def set_jsonstr_sequences(self, c, jsonstr_sequences):
+        self.jsonstr_sequences = json.loads(jsonstr_sequences)
+        print(self.jsonstr_sequences)
     
 Server = SequencerServer()
     
