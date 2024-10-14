@@ -181,7 +181,7 @@ class YeSrSequencerBoard(DefaultDevice):
             self._set_sequence(subsequence_names, jsonstr_sequences)
         except Exception as e:
             print(traceback.format_exc())
-            print(e) # TODO: remove after debugging?
+            print(e)
             print('setting sequence failed - trying to fix sequence keys...')
             self.fix_sequence_keys(subsequence_names)
             self._set_sequence(subsequence_names)
@@ -196,14 +196,8 @@ class YeSrSequencerBoard(DefaultDevice):
             else:
                 if jsonstr_sequences is None:
                     raise ValueError('jsonstr_sequences is empty but subsequence ' + subsequence_name + ' requires a sequence provided in a dedicated JSON string.')
-                else:
-                    print(jsonstr_sequences.keys())
                 seq_name = subsequence_name.split('.jsonstr')[0] # get name before '.jsonstr'
-                print(seq_name)
                 subsequence = jsonstr_sequences[seq_name]
-            #print(subsequence)
-            #print()
-            #print()
             subsequence_list.append(subsequence)
 
         raw_sequence = self.combine_subsequences(subsequence_list)

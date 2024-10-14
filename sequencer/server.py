@@ -175,24 +175,6 @@ class SequencerServer(DeviceServer):
         return response_json
 
     def _sequence(self, request={}):
-        ## check if sequence requires jsonstr_sequences
-        #has_jsonstr = False
-        #if request != {}:
-        #    for dev,seq in request.items():
-        #        if seq is not None:
-        #            for string in seq:
-        #                if '.jsonstr' in string:
-        #                    print('jsonstr detected!')
-        #                    has_jsonstr = True
-        #                    break
-        #        if has_jsonstr:
-        #            break
-        #if not has_jsonstr or not hasattr(self, 'jsonstr_sequences'):
-        #    self.jsonstr_sequences = None
-        #print('sequence:')
-        #print(self.jsonstr_sequences)
-
-        # program sequence
         if request == {}:
             request = {device_name: None for device_name in self.devices}
         response = {}
@@ -246,7 +228,6 @@ class SequencerServer(DeviceServer):
     @setting(16)
     def set_jsonstr_sequences(self, c, jsonstr_sequences):
         self.jsonstr_sequences = json.loads(jsonstr_sequences)
-        print(self.jsonstr_sequences)
     
 Server = SequencerServer()
     
