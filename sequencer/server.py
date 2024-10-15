@@ -36,7 +36,7 @@ class SequencerServer(DeviceServer):
     name = 'sequencer'
     update = Signal(UPDATE_ID, 'signal: update', 's')
 
-    jsonstr_sequences = None
+    virtual_sequences = None
     
     def _get_channel(self, channel_id):
         """
@@ -181,7 +181,7 @@ class SequencerServer(DeviceServer):
         for device_name, device_request in request.items():
             device = self._get_device(device_name)
             if device_request is not None:
-                device.set_sequence(device_request, self.jsonstr_sequences)
+                device.set_sequence(device_request, self.virtual_sequences)
             device_response = device.get_sequence()
             response.update({device_name: device_response})
         self._send_update({'sequence': response})
@@ -226,8 +226,8 @@ class SequencerServer(DeviceServer):
         return response
 
     @setting(16)
-    def set_jsonstr_sequences(self, c, jsonstr_sequences):
-        self.jsonstr_sequences = json.loads(jsonstr_sequences)
+    def set_virtual_sequences(self, c, virtual_sequences):
+        self.virtual_sequences = json.loads(virtual_sequences)
     
 Server = SequencerServer()
     
